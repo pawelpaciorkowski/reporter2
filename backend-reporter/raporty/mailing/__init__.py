@@ -1,0 +1,2 @@
+MENU_ENTRY = 'Mailingi'
+REQUIRE_ROLE = ['C-ADM']

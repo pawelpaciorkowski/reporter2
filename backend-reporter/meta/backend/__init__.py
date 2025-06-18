@@ -1,0 +1,2 @@
+MENU_ENTRY = None
+REQUIRE_ROLE = ['ADMIN']

@@ -1,0 +1,10 @@
+- weryfikacja poprawności replikacji - przenieść raport ogólny i szczegółowy, wybór grup płatników globalnych, a nie per lab
+
+punkty - kanały
+select k.del, k.dc, trim(k.symbol) as symbol, k.nazwa,
+    trim(o.symbol) as oddzial, o.nazwa as oddzial_nazwa,
+    trim(tz.symbol) as typ_zlecenia, k.ceny
+from kanaly k 
+left join oddzialy o on o.id=k.oddzial 
+left join typyzlecen tz on tz.id=k.typzlecenia 
+

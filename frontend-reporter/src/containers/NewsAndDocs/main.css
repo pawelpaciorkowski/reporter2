@@ -1,0 +1,20 @@
+div.mrkdwn table, div.mrkdwn th, div.mrkdwn td {
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+
+div.docsIcon {
+    width: 32px;
+    height: 32px;
+    font-size: 32px;
+    color: #bbccee;
+    float: right;
+}
+
+div.mrkdwn {
+    position: relative;
+}
+
+div.showHideOld {
+    text-align: right;
+}

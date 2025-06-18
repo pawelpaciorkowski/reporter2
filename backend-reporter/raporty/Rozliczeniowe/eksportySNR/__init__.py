@@ -1,0 +1,3 @@
+MENU_ENTRY = 'Eksporty z SNR'
+
+REQUIRE_ROLE = 'C-ROZL'

@@ -1,0 +1,12 @@
+include <preamble.slonik>
+ 
+try {
+    subscribe set (id = @set_snrkonf, 
+                   provider = @node_snr_master,
+                   receiver = @node_snr_slave,
+                   forward = yes);
+}
+on error {
+    exit 1;
+}
+echo 'Subscribed!';

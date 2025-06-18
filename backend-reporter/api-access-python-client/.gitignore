@@ -1,0 +1,9 @@
+.idea/
+*.pyc
+__pycache__
+.coverage
+.vscode
+.mypy_cache
+.~*
+*.kate-swp
+*.egg-info

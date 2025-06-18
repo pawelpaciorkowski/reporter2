@@ -1,0 +1,47 @@
+http://notatnik.mekk.waw.pl/archives/12-Replikacja_baz_PostgreSQL_-_Slony_I.html
+
+1. Instalacja narzędzia Slony
+
+# wget http://www.slony.info/downloads/2.2/source/slony1-2.2.8.tar.bz2
+# tar xjf slony1-2.2.8.tar.bz2
+# ./configure --prefix=/opt/slony
+Na debianie doinstalowanie postgresql-server-dev-11 - uwaga, musi to być wersja odpowiadająca chodzącemu serwerowi
+
+# make
+# make install
+
+
+2. Dajemy uprawnienia do podłączania się dla zdalnego hosta
+
+3. Robimy zrzut i odtwarzamy wybrane tabele
+# pg_dump --schema-only --host master.host --port 5432 MasterDB > schema.sql
+
+4. Tworzymy użytkowników do replikacji w obu bazach (pewnie można pominąć i używać postgres)
+$ createuser --host=master.host --port=5432 \
+        --superuser --pwprompt --encrypted slony
+$ createuser --host=slave.host --port=5433 \
+        --superuser --pwprompt --encrypted slony
+
+
+tworzymy pliki preamble.slonik i init_cluster.slonik i próbujemy odpalić
+slonik init_cluster.slonik
+
+W razie problemów, jeśli w którejś bazie już się założy schemat do replikacji
+to można go wywalić:
+psql# drop schema _snrkonf cascade;
+
+Jak wszystko pójdzie ok, to tworzymy konfiguracje i odpalamy instancję słoń daemonów:
+
+kopiujemy slon.conf-sample na serwery jako /opt/slony/etc/slon.conf
+w plikach docelowych ustawiamy cluster_name i conn_info dla lokalnych baz
+odpalamy (najpierw ręcznie, a potem można jakoś podpiąć):
+/opt/slony/bin/slon -f /opt/slony/etc/slon.conf
+
+(uwaga - instancje muszą mieć prawidłowo skonfigurowaną widoczność w obie strony!)
+
+Jak pójdzie dalej to tworzymy zbiór danych w pliku i odpalamy
+slonik create_set.slonik
+
+Na koniec:
+slonik subscribe.slonik
+

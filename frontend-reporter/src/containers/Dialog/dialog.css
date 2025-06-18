@@ -1,0 +1,50 @@
+@import "~@blueprintjs/datetime/lib/css/blueprint-datetime.css";
+
+div.containerHBox {
+    display: flex;
+    flex-direction: row;
+    align-content: stretch;
+}
+
+div.container_align_right {
+    justify-content: flex-end;
+}
+
+div.containerVBox {
+    display: flex;
+    flex-direction: column;
+}
+
+div.containerVBox>div.bp3-form-group {
+    flex-direction: row !important;
+}
+
+div.containerVBox>div.bp3-form-group>.bp3-label {
+    flex-basis: 120pt;
+    /* TODO XXX brzydkie, może ustawiać z flexboxa? */
+}
+
+div.containerHBox>div {
+    margin-right: 5pt;
+}
+
+div.forceHorizontal {
+    display: flex;
+    flex-direction: row;
+}
+
+div.forceHorizontalMiddle {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+}
+
+div.DayPicker-Caption select {
+    font-size: 0.8em;
+    padding: 0;
+}
+
+div.formErrors {
+    font-weight: bold;
+    color: red;
+}

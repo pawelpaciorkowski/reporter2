@@ -1,0 +1,15 @@
+include <preamble.slonik>
+ 
+echo 'Set up replication nodes';
+ 
+init cluster (id = @node_snr_master, comment = 'SNR master');
+store node (id = @node_snr_slave, comment = 'SNR slave', event node = @node_snr_master);
+ 
+echo 'Define paths';
+ 
+store path (server = @node_snr_slave, client = @node_snr_master, 
+    conninfo = 'host=2.0.205.117 port=5432 dbname=snrkonf user=slony password=SNR.replikacja2020');
+store path (server = @node_snr_master, client = @node_snr_slave, 
+    conninfo = 'host=2.0.4.101 port=5432 dbname=rozliczeniowa user=slony password=SNR.replikacja2020');
+ 
+echo 'Please start a slon replication daemon for each node';

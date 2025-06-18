@@ -1,0 +1,2 @@
+MENU_ENTRY = 'Mailing'
+REQUIRE_ROLE = ['C-ADM']

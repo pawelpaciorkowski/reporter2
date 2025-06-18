@@ -1,0 +1,50 @@
+[Metody]
+*Symbol
+*Badanie@Badania
+Nazwa
+Kod
+Pracownia@Pracownie
+Aparat@Aparaty
+Koszt
+Punkty
+*BadanieZrodlowe@Badania-
+MetodaZrodlowa@Metody&Metody.Badanie@Badania
+Serwis
+NiePrzelaczac
+Grupa
++	1	X-TARWS	AN-ACIP	Wysy³ka do Tarnobrzegu - Szpital Wojewódzki - ALAB		X-TARWS	X-WYSYL			WYSYLKA	WYSYLKA	WYSYLKA		0
++	1	X-TARWS	AN-ACIR	Wysy³ka do Tarnobrzegu - Szpital Wojewódzki - ALAB		X-TARWS	X-WYSYL			WYSYLKA	WYSYLKA	WYSYLKA		0
+
+
+[ParametryWMetodach]
+*Metoda@Metody&Metody.Badanie@Badania
+*Parametr@Parametry&Parametry.Metoda@Metody&Metody.Badanie@Badania
+Dorejestrowywany
+Kolejnosc
+Format
++	X-TARWS	AN-ACIP	WYSYLKA	WYSYLKA	WYSYLKA	0	0
++	X-TARWS	AN-ACIR	WYSYLKA	WYSYLKA	WYSYLKA	0	0
+
+
+[PowiazaniaMetod]
+*Badanie@Badania
+*DowolnyTypZlecenia
+*TypZlecenia@TypyZlecen
+*DowolnaRejestracja
+*Rejestracja@Rejestracje
+*DowolnySystem
+*System@Systemy
+Metoda@Metody&Metody.Badanie@Badania
+InnaPracownia
+Pracownia@Pracownie
+*DoRozliczen
+*DowolnyMaterial
+*Material@Materialy
+*DowolnyOddzial
+*Oddzial@Oddzialy
+*DowolnyPlatnik
+*Platnik@Platnicy
++	AN-ACIP	1		1		0	CHELM	X-TARWS	AN-ACIP	0		0	1		1		1
++	AN-ACIR	1		1		0	CHELM	X-TARWS	AN-ACIR	0		0	1		1		1
+
+

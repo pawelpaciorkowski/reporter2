@@ -1,0 +1,5 @@
+from .ReportTitle import TitleGenerator
+from .ReportMiesieczny import MonthlyTitleGenerator
+from .ReportDzienny import DailyTitleGenerator
+from .RaportPoBadaniachIPakietach import TestAndBundleTitle
+from .RaportKodyRabatowe import PromotionCodesTitle

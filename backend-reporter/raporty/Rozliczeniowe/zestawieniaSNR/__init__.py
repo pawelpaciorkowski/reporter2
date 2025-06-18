@@ -1,0 +1,3 @@
+MENU_ENTRY = 'Zestawienia z SNR'
+
+REQUIRE_ROLE = 'C-ROZL'

@@ -1,0 +1,532 @@
+include <preamble.slonik>
+ 
+ try {
+       create set (id = @set_snrkonf, origin = @node_snr_master,
+                   comment = 'Replikacja konfiguracji');
+ } on error {
+       echo 'Failed to create set';
+       exit 1;
+ }
+ echo 'Set initialized';
+ 
+ # Tables
+ echo 'Adding tables';
+
+ ## TABLE TEMPLATE
+
+ #set add table (set id = @set_snrkonf, origin = @node_snr_master,
+ #               id = $ID$,
+ #               full qualified name = 'public.$TABLE_NAME$',
+ #               comment = 'Table public.$TABLE_NAME$');
+ #echo '... public.$TABLE_NAME$';
+
+ ## TABLES
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 101,
+               full qualified name = 'public.hstkontapracownikow',
+               comment = 'Table public.hstkontapracownikow');
+echo '... public.hstkontapracownikow';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 102,
+               full qualified name = 'public.hstpozycjekatalogow',
+               comment = 'Table public.hstpozycjekatalogow');
+echo '... public.hstpozycjekatalogow';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 103,
+               full qualified name = 'public.hstpozycjepowiazankatalogow',
+               comment = 'Table public.hstpozycjepowiazankatalogow');
+echo '... public.hstpozycjepowiazankatalogow';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 104,
+               full qualified name = 'public.hstpozycjeslownikow',
+               comment = 'Table public.hstpozycjeslownikow');
+echo '... public.hstpozycjeslownikow';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 105,
+               full qualified name = 'public.hstpracownicy',
+               comment = 'Table public.hstpracownicy');
+echo '... public.hstpracownicy';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 106,
+               full qualified name = 'public.hstprawadostepu',
+               comment = 'Table public.hstprawadostepu');
+echo '... public.hstprawadostepu';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 107,
+               full qualified name = 'public.hstprawawfunkcjach',
+               comment = 'Table public.hstprawawfunkcjach');
+echo '... public.hstprawawfunkcjach';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 108,
+               full qualified name = 'public.hstprzedstawicielewceglach',
+               comment = 'Table public.hstprzedstawicielewceglach');
+echo '... public.hstprzedstawicielewceglach';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 109,
+               full qualified name = 'public.hstprzydzialcennikow',
+               comment = 'Table public.hstprzydzialcennikow');
+echo '... public.hstprzydzialcennikow';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 110,
+               full qualified name = 'public.hstregiony',
+               comment = 'Table public.hstregiony');
+echo '... public.hstregiony';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 111,
+               full qualified name = 'public.hstreguly',
+               comment = 'Table public.hstreguly');
+echo '... public.hstreguly';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 112,
+               full qualified name = 'public.hstrejestry',
+               comment = 'Table public.hstrejestry');
+echo '... public.hstrejestry';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 113,
+               full qualified name = 'public.hstskanywumowie',
+               comment = 'Table public.hstskanywumowie');
+echo '... public.hstskanywumowie';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 114,
+               full qualified name = 'public.hstumowy',
+               comment = 'Table public.hstumowy');
+echo '... public.hstumowy';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 115,
+               full qualified name = 'public.hstzestawienia',
+               comment = 'Table public.hstzestawienia');
+echo '... public.hstzestawienia';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 116,
+               full qualified name = 'public.hstzleceniodawcy',
+               comment = 'Table public.hstzleceniodawcy');
+echo '... public.hstzleceniodawcy';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 117,
+               full qualified name = 'public.hstzleceniodawcywlaboratoriach',
+               comment = 'Table public.hstzleceniodawcywlaboratoriach');
+echo '... public.hstzleceniodawcywlaboratoriach';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 118,
+               full qualified name = 'public.katalogi',
+               comment = 'Table public.katalogi');
+echo '... public.katalogi';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 119,
+               full qualified name = 'public.kolumnyuniwersalnego',
+               comment = 'Table public.kolumnyuniwersalnego');
+echo '... public.kolumnyuniwersalnego';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 120,
+               full qualified name = 'public.numeratory',
+               comment = 'Table public.numeratory');
+echo '... public.numeratory';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 121,
+               full qualified name = 'public.organizacje',
+               comment = 'Table public.organizacje');
+echo '... public.organizacje';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 122,
+               full qualified name = 'public.powiaty',
+               comment = 'Table public.powiaty');
+echo '... public.powiaty';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 123,
+               full qualified name = 'public.pracownicy',
+               comment = 'Table public.pracownicy');
+echo '... public.pracownicy';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 124,
+               full qualified name = 'public.prawadostepu',
+               comment = 'Table public.prawadostepu');
+echo '... public.prawadostepu';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 125,
+               full qualified name = 'public.reguly',
+               comment = 'Table public.reguly');
+echo '... public.reguly';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 126,
+               full qualified name = 'public.rejestry',
+               comment = 'Table public.rejestry');
+echo '... public.rejestry';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 127,
+               full qualified name = 'public.slowniki',
+               comment = 'Table public.slowniki');
+echo '... public.slowniki';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 128,
+               full qualified name = 'public.zestawienia',
+               comment = 'Table public.zestawienia');
+echo '... public.zestawienia';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 129,
+               full qualified name = 'public.centrarozliczeniowe',
+               comment = 'Table public.centrarozliczeniowe');
+echo '... public.centrarozliczeniowe';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 130,
+               full qualified name = 'public.eksporty',
+               comment = 'Table public.eksporty');
+echo '... public.eksporty';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 131,
+               full qualified name = 'public.funkcjepracownikow',
+               comment = 'Table public.funkcjepracownikow');
+echo '... public.funkcjepracownikow';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 132,
+               full qualified name = 'public.hstcegly',
+               comment = 'Table public.hstcegly');
+echo '... public.hstcegly';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 133,
+               full qualified name = 'public.hstcenniki',
+               comment = 'Table public.hstcenniki');
+echo '... public.hstcenniki';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 134,
+               full qualified name = 'public.hstcennikiwlaboratoriach',
+               comment = 'Table public.hstcennikiwlaboratoriach');
+echo '... public.hstcennikiwlaboratoriach';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 135,
+               full qualified name = 'public.hstcentrarozliczeniowe',
+               comment = 'Table public.hstcentrarozliczeniowe');
+echo '... public.hstcentrarozliczeniowe';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 136,
+               full qualified name = 'public.hstceny',
+               comment = 'Table public.hstceny');
+echo '... public.hstceny';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 137,
+               full qualified name = 'public.hsteksporty',
+               comment = 'Table public.hsteksporty');
+echo '... public.hsteksporty';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 138,
+               full qualified name = 'public.hstfunkcjepracownikow',
+               comment = 'Table public.hstfunkcjepracownikow');
+echo '... public.hstfunkcjepracownikow';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 139,
+               full qualified name = 'public.hstfunkcjewkontach',
+               comment = 'Table public.hstfunkcjewkontach');
+echo '... public.hstfunkcjewkontach';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 140,
+               full qualified name = 'public.hstkodywceglach',
+               comment = 'Table public.hstkodywceglach');
+echo '... public.hstkodywceglach';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 141,
+               full qualified name = 'public.cegly',
+               comment = 'Table public.cegly');
+echo '... public.cegly';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 142,
+               full qualified name = 'public.hstlaboratoria',
+               comment = 'Table public.hstlaboratoria');
+echo '... public.hstlaboratoria';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 143,
+               full qualified name = 'public.hstoferty',
+               comment = 'Table public.hstoferty');
+echo '... public.hstoferty';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 144,
+               full qualified name = 'public.hstorganizacje',
+               comment = 'Table public.hstorganizacje');
+echo '... public.hstorganizacje';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 145,
+               full qualified name = 'public.hstplatnicy',
+               comment = 'Table public.hstplatnicy');
+echo '... public.hstplatnicy';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 146,
+               full qualified name = 'public.hstplatnicywlaboratoriach',
+               comment = 'Table public.hstplatnicywlaboratoriach');
+echo '... public.hstplatnicywlaboratoriach';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 147,
+               full qualified name = 'public.hstpowiatywregionach',
+               comment = 'Table public.hstpowiatywregionach');
+echo '... public.hstpowiatywregionach';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 148,
+               full qualified name = 'public.oferty',
+               comment = 'Table public.oferty');
+echo '... public.oferty';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 149,
+               full qualified name = 'public.regiony',
+               comment = 'Table public.regiony');
+echo '... public.regiony';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 150,
+               full qualified name = 'public.kodypocztowe',
+               comment = 'Table public.kodypocztowe');
+echo '... public.kodypocztowe';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 151,
+               full qualified name = 'public.kodywceglach',
+               comment = 'Table public.kodywceglach');
+echo '... public.kodywceglach';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 152,
+               full qualified name = 'public.powiazaniakatalogow',
+               comment = 'Table public.powiazaniakatalogow');
+echo '... public.powiazaniakatalogow';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 153,
+               full qualified name = 'public.pozycjekatalogow',
+               comment = 'Table public.pozycjekatalogow');
+echo '... public.pozycjekatalogow';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 154,
+               full qualified name = 'public.kontapracownikow',
+               comment = 'Table public.kontapracownikow');
+echo '... public.kontapracownikow';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 155,
+               full qualified name = 'public.pozycjeslownikow',
+               comment = 'Table public.pozycjeslownikow');
+echo '... public.pozycjeslownikow';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 156,
+               full qualified name = 'public.prawawfunkcjach',
+               comment = 'Table public.prawawfunkcjach');
+echo '... public.prawawfunkcjach';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 157,
+               full qualified name = 'public.przedstawicielewceglach',
+               comment = 'Table public.przedstawicielewceglach');
+echo '... public.przedstawicielewceglach';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 158,
+               full qualified name = 'public.powiatywregionach',
+               comment = 'Table public.powiatywregionach');
+echo '... public.powiatywregionach';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 159,
+               full qualified name = 'public.pozycjepowiazankatalogow',
+               comment = 'Table public.pozycjepowiazankatalogow');
+echo '... public.pozycjepowiazankatalogow';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 160,
+               full qualified name = 'public.funkcjewkontach',
+               comment = 'Table public.funkcjewkontach');
+echo '... public.funkcjewkontach';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 161,
+               full qualified name = 'public.platnicy',
+               comment = 'Table public.platnicy');
+echo '... public.platnicy';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 162,
+               full qualified name = 'public.umowy',
+               comment = 'Table public.umowy');
+echo '... public.umowy';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 163,
+               full qualified name = 'public.laboratoria',
+               comment = 'Table public.laboratoria');
+echo '... public.laboratoria';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 164,
+               full qualified name = 'public.zleceniodawcy',
+               comment = 'Table public.zleceniodawcy');
+echo '... public.zleceniodawcy';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 165,
+               full qualified name = 'public.platnicywlaboratoriach',
+               comment = 'Table public.platnicywlaboratoriach');
+echo '... public.platnicywlaboratoriach';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 166,
+               full qualified name = 'public.przydzialcennikow',
+               comment = 'Table public.przydzialcennikow');
+echo '... public.przydzialcennikow';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 167,
+               full qualified name = 'public.zleceniodawcywlaboratoriach',
+               comment = 'Table public.zleceniodawcywlaboratoriach');
+echo '... public.zleceniodawcywlaboratoriach';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 168,
+               full qualified name = 'public.skanywumowie',
+               comment = 'Table public.skanywumowie');
+echo '... public.skanywumowie';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 169,
+               full qualified name = 'public.cenniki',
+               comment = 'Table public.cenniki');
+echo '... public.cenniki';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 170,
+               full qualified name = 'public.ceny',
+               comment = 'Table public.ceny');
+echo '... public.ceny';
+
+
+set add table (set id = @set_snrkonf, origin = @node_snr_master,
+               id = 171,
+               full qualified name = 'public.cennikiwlaboratoriach',
+               comment = 'Table public.cennikiwlaboratoriach');
+echo '... public.cennikiwlaboratoriach';
+
+ ## END TABLES
+
+ # Sequences
+# echo 'Adding sequences';
+ 
+# set add sequence (set id = @set_snrkonf, origin = @node_snr_master,
+#                   id = 201,
+#                   full qualified name = 'public.users_user_id_seq',
+#                   comment = 'Sequence users/user_id');
+# echo '... public.users_user_id_seq';
+ 
+ echo 'All tables and sequences added';

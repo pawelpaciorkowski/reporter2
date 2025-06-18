@@ -1,0 +1,1 @@
+Sprawdzenie aktualnego systemu na bazie wzorcowej i historii zmian.

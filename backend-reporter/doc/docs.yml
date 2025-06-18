@@ -1,0 +1,10 @@
+target: alab_reporter.pdf
+title: Alab Reporter - dokumentacja funkcjonalna i techniczna
+author: Adam Morawski, Anna Kaczyńska
+parts:
+  - wstep.md
+  - $raporty
+  - $uprawnienia
+  - dokumentacja_techniczna.md
+changes:
+  - 2024-11-25 | DRAFT | Pierwsza robocza wersja dokumentu.

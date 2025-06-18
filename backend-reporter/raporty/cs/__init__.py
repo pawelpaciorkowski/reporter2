@@ -1,0 +1,3 @@
+MENU_ENTRY = 'CS'
+
+REQUIRE_ROLE = ['C-CS']

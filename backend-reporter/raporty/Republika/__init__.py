@@ -1,0 +1,3 @@
+MENU_ENTRY = 'Republika'
+
+REQUIRE_ROLE = ['ADMIN']

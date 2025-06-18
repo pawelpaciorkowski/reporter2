@@ -1,0 +1,83 @@
+
+
+div.filter {
+    color: #5c7080;
+}
+
+div.filterActive {
+    color: #000000;
+}
+
+div.filter span {
+    cursor: pointer;
+}
+
+div.filter span.option {
+    background: #f9f9f9;
+    padding: 1pt;
+    margin-left: 2pt;
+}
+
+div.filter span.selected {
+    background: #3dcc91;
+}
+
+div.event {
+    margin-top: 2pt;
+    background: #f5f8fa;
+}
+
+div.event h4 {
+    margin: 0;
+    cursor: pointer;
+}
+
+div.event h4 .domainName, div.event h4 .eventTimestamp {
+    color: #6b6b76;
+}
+
+div.event h4 .serviceName {
+    color: #0a6640;
+}
+
+div.eventMainDetails {
+    padding-left: 5pt;
+}
+
+div.eventUnrelated {
+    color: #6b6b76;
+}
+
+div.transactionInfo {
+    background: #0e5a8a;
+    color: #f5f8fa;
+}
+
+div.transactionInfoRight {
+    float: right;
+}
+
+div.transactionInfoRight span {
+    margin-right: 5pt;
+}
+
+span.fieldTitle {
+    font-size: 0.9em;
+    opacity: 0.8;
+    padding-right: 2pt;
+}
+
+span.fieldValue {
+    margin-right: 3pt;
+}
+
+span.fieldNewLine:before,span.fieldNewLine:after {  content: ' '; display: block;  }
+
+span.field ul {
+    margin: 0;
+}
+
+span.field li {
+    padding: 0; margin: 0;
+    list-style-type: circle;
+}

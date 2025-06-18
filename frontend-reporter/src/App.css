@@ -1,0 +1,50 @@
+.App {
+    padding-bottom: 10pt;
+}
+
+.errorMsg {
+    display: inline;
+    margin: 3pt;
+    line-height: 3em;
+    padding: 3pt;
+    color: darkred;
+    border: 1px solid darkred;
+    background: lightpink;
+}
+
+
+/* TODO: inne proporcje na inne media */
+
+div#app {
+    display: grid;
+    grid-template-columns: min-content auto;
+    grid-template-rows: min-content auto min-content;
+}
+
+div#topBar {
+    grid-row-start: 1;
+    grid-row-end: 1;
+    grid-column-start: 1;
+    grid-column-end: 3;
+}
+
+div#sidebar {
+    grid-row-start: 2;
+    grid-row-end: 2;
+    grid-column-start: 1;
+    grid-column-end: 1;
+}
+
+div#mainContent {
+    grid-row-start: 2;
+    grid-row-end: 2;
+    grid-column-start: 2;
+    grid-column-end: 2;
+}
+
+div#footer {
+    grid-row-start: 3;
+    grid-row-end: 3;
+    grid-column-start: 1;
+    grid-column-end: 3;
+}

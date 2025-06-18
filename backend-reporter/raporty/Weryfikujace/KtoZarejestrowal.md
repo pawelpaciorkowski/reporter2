@@ -1,0 +1,1 @@
+Raport przedstawia informacje o osobach rejestrujących zlecenia w bazie laboratoryjnej.

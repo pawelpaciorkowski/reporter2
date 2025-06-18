@@ -1,0 +1,34 @@
+table.settingsTable th {
+
+}
+
+table.settingsTable, table.settingsTable th, table.settingsTable td {
+    border: 1px solid #000;
+    border-collapse: collapse;
+}
+
+table.settingsTable tr:nth-child(even) td {
+    background: #eee;
+}
+
+tr.rowDeleted td {
+    text-decoration: line-through;
+    color: #713535;
+    background-color: rgba(248, 96, 36, 0.58) !important;
+}
+
+table.historyTable, table.historyTable th, table.historyTable td {
+    border: 1px solid #000;
+    border-collapse: collapse;
+}
+
+table.historyTable tr:nth-child(even) td {
+    background: #eee;
+}
+
+table.historyTable tr:nth-child(odd) td {
+    background: #fff;
+}
+.new_line_int_text {
+    white-space: pre-line;
+}

@@ -1,0 +1,70 @@
+class Config(object):
+    DEBUG = True
+    TESTING = True
+    DATABASE_AWARIE = "dbname='awarie' user='postgres' password=passsword host='10.1.1.85' port=5462"
+    DATABASE = "dbname=reporter user=postgres host=127.0.0.1 port=5432"
+    DATABASE_SNRCONF = "dbname='snrkonf' user='postgres' host='2.0.205.117' port=5432"
+    DATABASE_GJW = "dbname='wyniki' user='postgres' host='...' port=5432"
+    DATABASE_NOCKA_OPENVPN ="dbname='snrkonf' user='postgres' host='2.0.205.117' port=5432"
+    DATABASE_NOCKA_RO = "dbname='snrkonf' user='postgres' host='2.0.205.117' port=5432"
+    DATABASE_NOCKA_ADM = "dbname='snrkonf' user='postgres' host='2.0.205.117' port=5432"
+    DATABASE_MKURIER = "dbname='snrkonf' user='postgres' host='2.0.205.117' port=5432"
+    DATABASE_REPUBLIKA = "host=2.0.202.241 port=5432 user=postgres dbname=republika"
+    DATABASE_SKLEP = 'user=user database=database password=passsword host=host port=port'
+    DATABASE_ALABSERWIS = 'user=user database=database password=passsword host=host port=port'
+    DATABASE_WOREK = "host=10.1.1.12 port=5432 user=postgres dbname=zlecenia"
+    DATABASE_EFAKTURA = 'mssql+pymssql://server/database'
+    DATABASE_SIMPLE = 'mssql+pymssql://server/database'
+    DATABASE_WCF = 'user=user database=database password=passsword host=host port=port'
+    DATABASE_ERLAB = 'user=user database=database password=passsword host=host port=port'
+    DATABASE_PPALAB_UPSTREAM = "dbname='upstream' user='postgres' host='localhost' port=5435"
+    DATABASE_BIC = "dbname='bic' user='postgres' host='2.0.202.229' port=5432"
+    DATABASE_VOUCHERS = "dbname=xxx user=xxx password=xxx host=10.50.10.112 port=5439"
+    DATABASE_PESELE = "dbname='pesele' user='postgres' host='...' port=5432"
+    GJW_URL = 'http://2.0.216.13:8081/api/'
+    GJW_CREDENTIALS = {'login': 'login', 'password': 'password'}
+    # TODO XXX: koniecznie wygenerować nowy SECRET_KEY w środowisku produkcyjnym / w każdej instalacji
+    # generowanie klucza: python -c 'import os; print(repr(os.urandom(16)))'
+    SECRET_KEY = b'_5#y2L"F4Q8z\n\xec]/'
+    RQ_EXECUTABLE = '/usr/local/bin/rq'
+    MOP_URL = 'http://2.0.202.137/'
+    MOP_CREDENTIALS=['login', 'password']
+    SENTRY_URL = 'http://0e513e677ff94916b3bae55a6aff2974@2.0.205.117:9000/2'
+    EMAIL_CONFIG = {
+        'User': 'login@example.com',
+        'Pass': 'P@$$w0rD',
+        'Host': 'smtp.example.com',
+        'Port': '25'
+    }
+    HBZ_DATABASE = "mysql://scott:tiger@localhost/foo"
+    MOP_PUBLIC_KEY = """-----BEGIN PUBLIC KEY-----
+        MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAru+1w+27OjIjJJD7Vy+g
+        Jw/ZRQCDUqgMwg9OrkjDGwI4U7zU1fTO1DkNYonNUIKzI3qUUEueTPAkm1Frq+Gl
+        WhDsfHBWQt9Izcxxo+BPAEshIXSMhb4pJk/ZXlHRMYGMjxNsdQbjbgw/VOgdCt8V
+        wvqt0VKDj+ERoCDSXOJltmeIqxkAc4DZWngZK4NDDqZdt+QL+GC4nvLyXtA+awxW
+        O0uIWlvYcs2bm6dSdUpbX8w7xjMMDGG2EWMDUyyEgDpYzb2MS+xvN7YagId2dwgX
+        ijfWNchueP1klXp+G902GHjhqw1hAY1AYGSskbmLR5jxxa+3XPoow4UmrFmXvM2Y
+        3ZgnT3X7nMUD7aDRnFdKZTp46naNHfFqVXNMO51DTJCBzCnqKNIRUdBZEYLVFQY7
+        8OFSCo4qGbfTDLqNOApq1+p37m/n/HIu3wujhy+Q/3khiW9wYekJHNZf/CrdUUU6
+        ZhrOzmeFz08MhCApcAU4dXJf26w0o8B3t2tvjGz/UsQ4bfSMUHMEz9z9hbW0YFFk
+        85VikGab7ygm8NuLDi/EkTx8LjfPfE8STREJeXW7GcjEhEGr2NkszBf1KszVpFk4
+        s6/YkkrZouZRyBMiKgGfhqQdlU4ldrrVjrrurzqgTvCh9f7g1zS+kKn51ocJwt79
+        bd+B86d3dKjcQ68T/5iqtaECAwEAAQ==
+        -----END PUBLIC KEY-----"""
+    DJALAB_KEY = "...."
+    SIEC_ALAB = True
+    HELPER_DATABASES = '/tmp/'
+    KONTO_ALAB = {
+        'client_id': '',
+        'client_secret': '',
+        'oauth_base_url': '',
+        'redirect_url': '',
+    }
+    API_ACCESS_URL = 'http://10.1.254.252:8008/api-access/'
+    API_ACCESS_REFRESH_TOKEN = '...'
+    API_ACCESS_SERVER_PUBLIC_KEY = """"""
+    MS_STRUKTURA_URL='http://11.1.1.72:7701/'
+    MS_STRUKTURA_KEY=''
+    ES_BADANIA_URL='http://10.50.10.112:9200/'
+    ES_BADANIA_KEY='passw'
+

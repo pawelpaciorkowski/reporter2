@@ -1,0 +1,6 @@
+[submodule "api-python-client"]
+	path = backend-reporter/api-access-python-client
+	url = ../../api-access/api-python-client.git
+[submodule "api-python-server"]
+	path = backend-reporter/api-access-python-server
+	url = ../../api-access/api-python-server.git

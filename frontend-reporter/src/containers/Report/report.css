@@ -1,0 +1,26 @@
+table.reportTable {
+    font-size: 9pt;
+    font-family: "Open Sans", Arial, Helvetica, Sans-Serif;
+}
+
+table.reportTable th {
+    font-weight: normal;
+}
+
+table.reportTable, table.reportTable th, table.reportTable td {
+    border: 1px solid #000;
+    border-collapse: collapse;
+}
+
+table.reportTable tr:nth-child(even) td {
+    background: #eee;
+}
+
+table.vertical td.rowValue {
+    font-weight: bold;
+}
+
+table#karta_klienta, table#karta_klienta td {
+    border: 1px solid #000;
+    border-collapse: collapse;
+}
