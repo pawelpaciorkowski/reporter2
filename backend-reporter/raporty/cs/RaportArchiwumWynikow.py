@@ -14,55 +14,127 @@ from flask import send_file
 
 MENU_ENTRY = 'Raport Archiwum Wynikow (Multisync)'
 
-LAUNCH_DIALOG = Dialog(title=MENU_ENTRY, panel=VBox(
-    InfoText(text="Wyszukaj wyniki po podanych danych. Uwaga na ilość danych!"),
-    HBox(
-        VBox(
-            TextInput(field="pacjent_query", title="Imię, Nazwisko, PESEL lub Data urodzenia (po przecinkach)", required=False),
-            TextInput(field="zlecenie_data_od", title="Data zlecenia od (RRRR-MM-DD)", required=False),
-            TextInput(field="zlecenie_data_do", title="Data zlecenia do (RRRR-MM-DD)", required=False),
-        ),
-        VBox(
-            TextInput(field="zlecenie_kod_kreskowy", title="Kod kreskowy zlecenia", required=False),
-            TextInput(field="lekarz_imie", title="Imię Lekarza", required=False),
-            TextInput(field="lekarz_nazwisko", title="Nazwisko Lekarza", required=False),
-            TextInput(field="zleceniodawca_nazwa", title="Nazwa Zleceniodawcy", required=False),
-            TextInput(field="zleceniodawca_kod_lsi", title="Kod LSI Zleceniodawcy", required=False),
-            TextInput(field="zleceniodawca_nip", title="NIP Zleceniodawcy", required=False),
-        ),
-        VBox(
-            DynamicSelect(field="generate_pdf", title="Czy wygenerować pliki?", required=False, default='nie', options=[]),
-            DynamicSelect(field="pdf_mode", title="Rodzaj PDF-a", required=False, default='single', options=[]),
-            TextInput(field="selected_ids", title="Wybrane ID (przecinek oddzielone)", required=False),
-            DynamicSelect(field="typ_pliku", title="Typ pliku do pobrania", required=False, default='pdf', options=[]),
-            DynamicSelect(field="format_cda", title="Format CDA: PAdES czy XML?", required=False, default='cda', options=[]),
+LAUNCH_DIALOG = Dialog(
+    title=MENU_ENTRY,
+    panel=VBox(
+       
+
+        HBox(
+            # Sekcja: Wyszukiwanie po pacjencie lub dacie
+            VBox(
+                InfoText(text="Dane pacjenta i zakres dat"),
+                TextInput(
+                    field="pacjent_query",
+                    title="Imię, Nazwisko, PESEL lub Data urodzenia (po przecinkach)",
+                    required=False
+                ),
+                TextInput(
+                    field="zlecenie_data_od",
+                    title="Data zlecenia od (RRRR-MM-DD)",
+                    required=False
+                ),
+                TextInput(
+                    field="zlecenie_data_do",
+                    title="Data zlecenia do (RRRR-MM-DD)",
+                    required=False
+                ),
+            ),
+
+            # Sekcja: Dane zlecenia i lekarza
+            VBox(
+                InfoText(text="Szczegóły zlecenia i lekarza"),
+                TextInput(field="zlecenie_kod_kreskowy", title="Kod kreskowy zlecenia", required=False),
+                TextInput(field="lekarz_imie", title="Imię lekarza", required=False),
+                TextInput(field="lekarz_nazwisko", title="Nazwisko lekarza", required=False),
+                TextInput(field="zleceniodawca_nazwa", title="Nazwa zleceniodawcy", required=False),
+                TextInput(field="zleceniodawca_kod_lsi", title="Kod LSI zleceniodawcy", required=False),
+                TextInput(field="zleceniodawca_nip", title="NIP zleceniodawcy", required=False),
+            ),
+
+            # Sekcja: Generowanie plików
+            VBox(
+                InfoText(text="Ustawienia generowania plików"),
+                DynamicSelect(
+                    field="generate_pdf",
+                    title="Czy chcesz pobrać pliki z wynikami?",
+                    required=False,
+                    default="nie",
+                    options=[]
+                ),
+                DynamicSelect(
+                    field="pdf_mode",
+                    title="Rodzaj PDF-a",
+                    required=False,
+                    default="single",
+                    options=[]
+                ),
+                TextInput(
+                    field="selected_ids",
+                    title="Wybrane ID (oddzielone przecinkami)",
+                    required=False,
+                    help_text="Np. 12345,67890,22222"
+                ),
+                DynamicSelect(
+                    field="typ_pliku",
+                    title="Typ dokumentu do pobrania",
+                    required=False,
+                    default="pdf",
+                    options=[]
+                ),
+                DynamicSelect(
+                    field="format_cda",
+                    title="Format dokumentu CDA (jeśli wybrano CDA/XML)",
+                    required=False,
+                    default="pades",
+                    options=[]
+                )
+            )
         )
     )
-))
+)
+
+
 
 def get_generate_pdf_options(params):
     return [
-        {"label": "Nie", "value": "nie"},
-        {"label": "Tak", "value": "tak"},
+        {"label": "Nie – tylko wyświetl wyniki", "value": "nie"},
+        {"label": "Tak – pobierz pliki z wynikami", "value": "tak"},
     ]
+
 
 def get_pdf_mode_options(params):
     return [
-        {"label": "Osobne PDF-y", "value": "single"},
-        {"label": "Zbiorczy PDF", "value": "combined"},
+        {"label": "Oddzielne pliki PDF (dla każdego wyniku)", "value": "single"},
+        {"label": "Jeden zbiorczy plik PDF", "value": "combined"},
     ]
+
 
 def get_typ_pliku_options(params):
     return [
-        {"label": "PDF", "value": "pdf"},
-        {"label": "CDA (XML)", "value": "cda"},
+        {
+            "label": "Raport PDF – zbiorczy lub oddzielne pliki z wynikami badań",
+            "value": "pdf"
+        },
+        {
+            "label": "CDA (XML) – oryginalne dokumenty zgodne ze standardem HL7 CDA",
+            "value": "cda"
+        }
     ]
+
 
 def get_format_cda_options(params):
     return [
-        {"label": "XML", "value": "cda"},
-        {"label": "PAdES (PDF)", "value": "pades"},
+        {
+            "label": "📄 PDF – gotowy do wydruku (z podpisem)",
+            "value": "pades"
+        },
+        {
+            "label": "🗎 XML – surowy dokument (dla systemów)",
+            "value": "cda"
+        }
     ]
+
+
 
 def assign_widget_data(dialog):
     for field_name in ["generate_pdf", "pdf_mode", "typ_pliku", "format_cda"]:
@@ -258,12 +330,12 @@ def raport(task_params):
     print(f"DIAGNOSTYKA - DZIAŁAJĄCA WERSJA - ZAPYTANIE SQL: {sql}")
     print(f"DIAGNOSTYKA - DZIAŁAJĄCA WERSJA - WARTOŚCI SQL: {values}")
     results = db.dict_select(sql, values)
-    print(f"DIAGNOSTYKA - DZIAŁAJĄCA WERSJA - LICZBA WYNIKÓW Z BAZY: {len(results) if results else 0}")
-    if results:
-        print(f"DIAGNOSTYKA - DZIAŁAJĄCA WERSJA - PIERWSZY REKORD: {results[0]}")
 
-    if not results:
-        return {"type": "info", "text": "Brak danych w wyniku zapytania."}
+    if not results or len(results) == 0:
+        return {
+            "type": "info",
+            "text": "Brak danych spełniających podane kryteria. Spróbuj poszerzyć zakres dat lub zmienić filtry."
+        }
 
     header = [
         'ID', 'Tabela źródłowa', 'Laboratorium', 'Dane zlecenia (RAW)', 'Kod kreskowy zlecenia',
