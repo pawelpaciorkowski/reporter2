@@ -4,21 +4,22 @@ import zipfile
 import tempfile
 import os
 import traceback
+import math
+from PyPDF2 import PdfMerger
 
-from dialog import Dialog, VBox, HBox, InfoText, TextInput, Select, Button, DynamicSelect
+from dialog import Dialog, VBox, HBox, InfoText, TextInput, Select, Button, DynamicSelect, DateInput, Switch, DynamicSearch
 from tasks import TaskGroup
 from helpers import prepare_for_json
 from datasources.postgres import PostgresDatasource
 from config import Config
 from flask import send_file
 
-MENU_ENTRY = 'Raport Archiwum Wynikow (Multisync)'
+MENU_ENTRY = 'Raport Archiwum Wynikow Labor(Multisync)'
 
+# --- MODYFIKACJA INTERFEJSU UŻYTKOWNIKA ---
 LAUNCH_DIALOG = Dialog(
     title=MENU_ENTRY,
     panel=VBox(
-       
-
         HBox(
             # Sekcja: Wyszukiwanie po pacjencie lub dacie
             VBox(
@@ -28,16 +29,12 @@ LAUNCH_DIALOG = Dialog(
                     title="Imię, Nazwisko, PESEL lub Data urodzenia (po przecinkach)",
                     required=False
                 ),
-                TextInput(
-                    field="zlecenie_data_od",
-                    title="Data zlecenia od (RRRR-MM-DD)",
-                    required=False
+                HBox(
+                    DateInput(field='zlecenie_data_od', title='Data zlecenia od', required=False),
+                    DateInput(field='zlecenie_data_do', title='Data zlecenia do', required=False),
+                    Switch(field='jeden_dzien', title='Tylko jeden dzień')
                 ),
-                TextInput(
-                    field="zlecenie_data_do",
-                    title="Data zlecenia do (RRRR-MM-DD)",
-                    required=False
-                ),
+                 DynamicSearch(field='zlecenie_id', title='ID zlecenia (szukaj)', source='/api/gui/search/zlecenia_archiwum', required=False),
             ),
 
             # Sekcja: Dane zlecenia i lekarza
@@ -51,9 +48,30 @@ LAUNCH_DIALOG = Dialog(
                 TextInput(field="zleceniodawca_nip", title="NIP zleceniodawcy", required=False),
             ),
 
-            # Sekcja: Generowanie plików
+            # Sekcja: Generowanie plików i filtry
             VBox(
-                InfoText(text="Ustawienia generowania plików"),
+                InfoText(text="Filtry i ustawienia generowania plików"),
+                DynamicSelect(
+                    field="dostepne_pliki_filter",
+                    title="Dostępność oryginalnych plików",
+                    required=False,
+                    default="wszystkie",
+                    options=[]
+                ),
+                DynamicSelect(
+                    field="filter_pdf_available",
+                    title="Dostępny PDF",
+                    required=False,
+                    default="wszystkie",
+                    options=[]
+                ),
+                DynamicSelect(
+                    field="filter_cda_available",
+                    title="Dostępny CDA",
+                    required=False,
+                    default="wszystkie",
+                    options=[]
+                ),
                 DynamicSelect(
                     field="generate_pdf",
                     title="Czy chcesz pobrać pliki z wynikami?",
@@ -93,7 +111,11 @@ LAUNCH_DIALOG = Dialog(
     )
 )
 
-
+def get_dostepne_pliki_filter_options(params):
+    return [
+        {"label": "Pokaż wszystkie wyniki", "value": "wszystkie"},
+        {"label": "Tylko wyniki z oryginalnymi plikami do pobrania", "value": "tak"},
+    ]
 
 def get_generate_pdf_options(params):
     return [
@@ -101,53 +123,58 @@ def get_generate_pdf_options(params):
         {"label": "Tak – pobierz pliki z wynikami", "value": "tak"},
     ]
 
-
 def get_pdf_mode_options(params):
     return [
         {"label": "Oddzielne pliki PDF (dla każdego wyniku)", "value": "single"},
         {"label": "Jeden zbiorczy plik PDF", "value": "combined"},
     ]
 
-
 def get_typ_pliku_options(params):
     return [
-        {
-            "label": "Raport PDF – zbiorczy lub oddzielne pliki z wynikami badań",
-            "value": "pdf"
-        },
-        {
-            "label": "CDA (XML) – oryginalne dokumenty zgodne ze standardem HL7 CDA",
-            "value": "cda"
-        }
+        {"label": "Raport PDF – zbiorczy lub oddzielne pliki z wynikami badań", "value": "pdf"},
+        {"label": "CDA (XML) – oryginalne dokumenty zgodne ze standardem HL7 CDA", "value": "cda"}
     ]
-
 
 def get_format_cda_options(params):
     return [
-        {
-            "label": "📄 PDF – gotowy do wydruku (z podpisem)",
-            "value": "pades"
-        },
-        {
-            "label": "🗎 XML – surowy dokument (dla systemów)",
-            "value": "cda"
-        }
+        {"label": "📄 PDF – gotowy do wydruku (z podpisem)", "value": "pades"},
+        {"label": "🗎 XML – surowy dokument (dla systemów)", "value": "cda"}
     ]
 
+def get_format_cda_options(params):
+    return [
+        {"label": "📄 PDF – gotowy do wydruku (z podpisem)", "value": "pades"},
+        {"label": "🗎 XML – surowy dokument (dla systemów)", "value": "cda"}
+    ]
 
+def get_filter_pdf_available_options(params):
+    return [
+        {"label": "Wszystkie", "value": "wszystkie"},
+        {"label": "Tylko z PDF", "value": "tak"},
+        {"label": "Tylko bez PDF", "value": "nie"},
+    ]
+
+def get_filter_cda_available_options(params):
+    return [
+        {"label": "Wszystkie", "value": "wszystkie"},
+        {"label": "Tylko z CDA", "value": "tak"},
+        {"label": "Tylko bez CDA", "value": "nie"},
+    ]
 
 def assign_widget_data(dialog):
-    for field_name in ["generate_pdf", "pdf_mode", "typ_pliku", "format_cda"]:
+    field_map = {
+        "generate_pdf": get_generate_pdf_options,
+        "pdf_mode": get_pdf_mode_options,
+        "typ_pliku": get_typ_pliku_options,
+        "format_cda": get_format_cda_options,
+        "dostepne_pliki_filter": get_dostepne_pliki_filter_options,
+        "filter_pdf_available": get_filter_pdf_available_options,
+        "filter_cda_available": get_filter_cda_available_options
+    }
+    for field_name, function in field_map.items():
         widget = dialog.get_field_by_name(field_name)
-        if widget is not None:
-            if field_name == "generate_pdf":
-                widget.get_widget_data = get_generate_pdf_options
-            elif field_name == "pdf_mode":
-                widget.get_widget_data = get_pdf_mode_options
-            elif field_name == "typ_pliku":
-                widget.get_widget_data = get_typ_pliku_options
-            elif field_name == "format_cda":
-                widget.get_widget_data = get_format_cda_options
+        if widget:
+            widget.get_widget_data = function
 
 assign_widget_data(LAUNCH_DIALOG)
 
@@ -156,6 +183,10 @@ def start_report(params):
         return {"type": "clear"}
 
     params = LAUNCH_DIALOG.load_params(params)
+    
+    if params.get('jeden_dzien'):
+        params['zlecenie_data_do'] = params['zlecenie_data_od']
+
     report = TaskGroup(__PLUGIN__, params)
     task = {
         'type': 'ick',
@@ -167,8 +198,40 @@ def start_report(params):
     report.save()
     return report
 
-def raport(task_params):
+# --- NOWA FUNKCJA DO GENEROWANIA ZBIORCZEGO PDF ---
+def raport_pdf_zbiorczy(task_params):
     db = PostgresDatasource(Config.DATABASE_MULTISYNC2)
+    ids = task_params['params']['ids']
+    
+    try:
+        merger = PdfMerger()
+        
+        # Pobieranie PDFów w paczkach, aby nie przeciążyć bazy
+        batch_size = 20
+        for i in range(0, len(ids), batch_size):
+            batch_ids = ids[i:i + batch_size]
+            pdf_result = db.dict_select('SELECT wynikowe_dane.generuj_pdf_z_wynikami(%s) AS pdf_base64', [batch_ids])
+            if pdf_result and pdf_result[0].get('pdf_base64'):
+                pdf_bytes = base64.b64decode(pdf_result[0]['pdf_base64'])
+                merger.append(io.BytesIO(pdf_bytes))
+
+        output_buffer = io.BytesIO()
+        merger.write(output_buffer)
+        merger.close()
+
+        return {
+            "type": "base64file",
+            "filename": "raport_zbiorczy_wyniki.pdf",
+            "content": base64.b64encode(output_buffer.getvalue()).decode("utf-8"),
+            "mimetype": "application/pdf"
+        }
+    except Exception as e:
+        traceback.print_exc()
+        return {"type": "info", "text": f"Błąd podczas generowania zbiorczego PDF: {e}"}
+
+
+def raport(task_params):
+    db = PostgresDatasource(Config.DATABASE_MULTISYNC)
     params = task_params.get('params', {})
     generate_pdf = params.get('generate_pdf') == 'tak'
     selected_ids = params.get('selected_ids')
@@ -185,7 +248,6 @@ def raport(task_params):
 
         try:
             files = []
-
             if file_type == "cda":
                 sql = "SELECT id, zlecenie FROM wynikowe_dane.wyniki WHERE id = ANY(%s)"
                 results = db.dict_select(sql, [ids])
@@ -204,14 +266,14 @@ def raport(task_params):
                         filename = f"wynik_{id_}.pdf"
                         mimetype = "application/pdf"
                     if not cda_hex:
-                        continue 
+                        continue
                     try:
                         if cda_hex.startswith("\\x"):
                             cda_bytes = bytes.fromhex(cda_hex[2:])
                         else:
                             cda_bytes = base64.b64decode(cda_hex)
                     except Exception:
-                        cda_bytes = cda_hex.encode("utf-8") 
+                        cda_bytes = cda_hex.encode("utf-8")
                     files.append({
                         "filename": filename,
                         "content": base64.b64encode(cda_bytes).decode("utf-8"),
@@ -237,7 +299,7 @@ def raport(task_params):
                                 "content": result[0]['pdf_base64'],
                                 "mimetype": "application/pdf"
                             })
-            
+
             if not files:
                 return {"type": "info", "text": f"Nie udało się wygenerować żadnych plików ({file_type})."}
 
@@ -262,40 +324,41 @@ def raport(task_params):
             traceback.print_exc()
             return {"type": "info", "text": f"Błąd podczas generowania plików: {e}"}
 
-
+    # --- MODYFIKACJA LOGIKI WYSZUKIWANIA I PAGINACJI ---
     conditions = []
     values = []
     
-    
-    if not generate_pdf and not any([
-        params.get('pacjent_query'),
-        params.get('zlecenie_data_od'),
-        params.get('zlecenie_data_do'),
-        params.get('zlecenie_kod_kreskowy'),
-        params.get('lekarz_imie'),
-        params.get('lekarz_nazwisko'),
-        params.get('zleceniodawca_nazwa'),
-        params.get('zleceniodawca_kod_lsi'),
-        params.get('zleceniodawca_nip')
+    page = int(params.get('page', 1))
+    limit = int(params.get('pageSize', 20)) # Use pageSize from frontend
+    offset = (page - 1) * limit
+    print(f"DEBUG: page={page}, limit={limit}, offset={offset}")
+
+    if not any([
+        params.get('pacjent_query'), params.get('zlecenie_data_od'), params.get('zlecenie_data_do'),
+        params.get('zlecenie_kod_kreskowy'), params.get('lekarz_imie'), params.get('lekarz_nazwisko'),
+        params.get('zleceniodawca_nazwa'), params.get('zleceniodawca_kod_lsi'), params.get('zleceniodawca_nip'),
+        params.get('zlecenie_id'),
+        params.get('filter_pdf_available') != 'wszystkie',
+        params.get('filter_cda_available') != 'wszystkie'
     ]):
-     return {"type": "info", "text": "Musisz podać przynajmniej jeden filtr, aby uruchomić wyszukiwanie."}
+        return {"type": "info", "text": "Musisz podać przynajmniej jeden filtr, aby uruchomić wyszukiwanie."}
 
+    if params.get('zlecenie_id'):
+        conditions.append('id = %s')
+        values.append(params['zlecenie_id'])
 
-    search_terms = []
     if params.get('pacjent_query'):
         search_terms = [term.strip() for term in params['pacjent_query'].split(',') if term.strip()]
-
-    for term in search_terms:
-        if term.isdigit() and len(term) == 11:
-            conditions.append('pacjent_pesel = %s')
-            values.append(term)
-        elif '-' in term and len(term) == 10:
-            conditions.append('pacjent_data_urodzenia = %s')
-            values.append(term)
-        else:
-            conditions.append('(pacjent_imie ILIKE %s OR pacjent_nazwisko ILIKE %s)')
-            values.append(f"%{term}%")
-            values.append(f"%{term}%")
+        for term in search_terms:
+            if term.isdigit() and len(term) == 11:
+                conditions.append('pacjent_pesel = %s')
+                values.append(term)
+            elif '-' in term and len(term) == 10:
+                conditions.append('pacjent_data_urodzenia = %s')
+                values.append(term)
+            else:
+                conditions.append('(pacjent_imie ILIKE %s OR pacjent_nazwisko ILIKE %s)')
+                values.extend([f"%{term}%", f"%{term}%"])
 
     if params.get('zlecenie_kod_kreskowy'):
         conditions.append('zlecenie_kod_kreskowy = %s')
@@ -321,24 +384,52 @@ def raport(task_params):
     if params.get('zlecenie_data_do'):
         conditions.append('zlecenie_data <= %s')
         values.append(params['zlecenie_data_do'])
+        
+    if params.get('dostepne_pliki_filter') == 'tak':
+        conditions.append("((zlecenie->'PREPROCESSED'->'PADES'->'PDF') IS NOT NULL OR (zlecenie->'PREPROCESSED'->'PADES'->'CDA') IS NOT NULL))")
+
+    if params.get('filter_pdf_available') == 'tak':
+        conditions.append("(zlecenie->'PREPROCESSED'->'PADES'->'PDF') IS NOT NULL")
+    elif params.get('filter_pdf_available') == 'nie':
+        conditions.append("(zlecenie->'PREPROCESSED'->'PADES'->'PDF') IS NULL")
+
+    if params.get('filter_cda_available') == 'tak':
+        conditions.append("(zlecenie->'PREPROCESSED'->'PADES'->'CDA') IS NOT NULL")
+    elif params.get('filter_cda_available') == 'nie':
+        conditions.append("(zlecenie->'PREPROCESSED'->'PADES'->'CDA') IS NULL")
 
     where_clause = ""
     if conditions:
         where_clause = "WHERE " + " AND ".join(conditions)
 
-    sql = f'SELECT * FROM wynikowe_dane.wyniki {where_clause} LIMIT 1000'
-    print(f"DIAGNOSTYKA - DZIAŁAJĄCA WERSJA - ZAPYTANIE SQL: {sql}")
-    print(f"DIAGNOSTYKA - DZIAŁAJĄCA WERSJA - WARTOŚCI SQL: {values}")
-    results = db.dict_select(sql, values)
+    # Zapytanie o całkowitą liczbę rekordów
+    count_sql = f"SELECT count(*) as total FROM wynikowe_dane.wyniki {where_clause}"
+    print(f"DEBUG: count_sql={count_sql}, values={values}")
+    total_records = db.dict_select(count_sql, values)[0]['total']
+    total_pages = math.ceil(total_records / limit)
 
-    if not results or len(results) == 0:
+    # Zapytanie o dane dla bieżącej strony
+    sql = f"""SELECT *,
+                (zlecenie->'PREPROCESSED'->'PADES'->'PDF') IS NOT NULL AS czy_jest_pdf_pades,
+                (zlecenie->'PREPROCESSED'->'PADES'->'CDA') IS NOT NULL AS czy_jest_cda_pades
+              FROM wynikowe_dane.wyniki {where_clause} 
+              ORDER BY id DESC
+              LIMIT %s OFFSET %s"""
+    
+    paginated_values = values + [limit, offset]
+    print(f"DEBUG: paginated_sql={sql}, paginated_values={paginated_values}")
+    results = db.dict_select(sql, paginated_values)
+    print(f"DEBUG: results from DB={results}")
+
+    if not results:
         return {
             "type": "info",
-            "text": "Brak danych spełniających podane kryteria. Spróbuj poszerzyć zakres dat lub zmienić filtry."
+            "text": "Brak danych spełniających podane kryteria. Spróbuj poszerzyć zakres dat lub zmienić filtry.",
+            "progress": 1
         }
 
     header = [
-        'ID', 'Tabela źródłowa', 'Laboratorium', 'Dane zlecenia (RAW)', 'Kod kreskowy zlecenia',
+        'ID', 'Dostępny PDF', 'Dostępny CDA', 'Tabela źródłowa', 'Laboratorium', 'Dane zlecenia (RAW)', 'Kod kreskowy zlecenia',
         'Numer wewnętrzny zlecenia (recno)', 'Numer rekordu zlecenia (rekno)', 'Data zlecenia',
         'Imię pacjenta', 'Nazwisko pacjenta', 'Data urodzenia pacjenta', 'PESEL pacjenta',
         'Imię lekarza', 'Nazwisko lekarza', 'Numer lekarza',
@@ -346,7 +437,7 @@ def raport(task_params):
     ]
 
     columns = [
-        'id', 'common_table_name', 'laboratorium', 'zlecenie',
+        'id', 'czy_jest_pdf_pades', 'czy_jest_cda_pades', 'common_table_name', 'laboratorium', 'zlecenie',
         'zlecenie_kod_kreskowy', 'zlecenie_recno', 'zlecenie_rekno', 'zlecenie_data',
         'pacjent_imie', 'pacjent_nazwisko', 'pacjent_data_urodzenia', 'pacjent_pesel',
         'lekarz_imie', 'lekarz_nazwisko', 'lekarz_numer',
@@ -354,9 +445,38 @@ def raport(task_params):
     ]
 
     data = [[row.get(col) for col in columns] for row in results]
+    
+    all_ids = [row['id'] for row in results]
 
-    return {
-        "type": "table",
-        "header": header,
-        "data": prepare_for_json(data)
+    # --- ZWRACANIE WYNIKÓW Z PAGINACJĄ I AKCJAMI ---
+    final_result = {
+        "type": "complex",
+        "results": [
+            {
+                "type": "table",
+                "header": header,
+                "data": prepare_for_json(data)
+            }
+        ],
+        "actions": [],
+        "progress": 1
     }
+
+    if total_pages > 1:
+        final_result['results'].append({
+            'type': 'pagination',
+            'current_page': page,
+            'total_pages': total_pages,
+            'action': 'run_report'
+        })
+        
+    if all_ids:
+        final_result['actions'].append({
+            'type': 'button',
+            'label': 'Pobierz wszystkie wyniki z tej strony jako PDF',
+            'action': 'run_function',
+            'function': 'raport_pdf_zbiorczy',
+            'params': {'ids': all_ids}
+        })
+
+    return final_result

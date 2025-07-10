@@ -94,6 +94,7 @@ import React from "react";
 import { ProgressBar, Callout, Switch } from "@blueprintjs/core";
 import { Table, VertTable, Info, ReportDiagram, Download, Action, Html } from "./widgets";
 import "./report.css";
+import Pagination from "../../components/pagination";
 import { RepublikaEventStreamView } from "../Republika/republika";
 
 function downloadBase64File(base64Data, fileName, contentType) {
@@ -116,7 +117,7 @@ class ReportView extends React.Component {
     }
 
     componentDidUpdate(prevProps) {
-        if (this.props.results !== prevProps.results && this.props.results !== null) {
+        if (this.props.results !== prevProps.results && Array.isArray(this.props.results)) {
             this.props.results.forEach(result => {
                 if (result.type === 'base64file') {
                     downloadBase64File(result.content, result.filename, result.mimetype);
@@ -158,7 +159,7 @@ class ReportView extends React.Component {
         console.log("Selected IDs before sending to backend: ", selectedIds);
 
         if (selectedIds.length === 0) {
-            alert("Nie wybrano żadnych wyników do wygenerowania PDF!");
+            this.props.api.toast('warning', "Nie wybrano żadnych wyników do wygenerowania PDF!");
             return;
         }
 
@@ -176,61 +177,75 @@ class ReportView extends React.Component {
 
 
     resultWidget(desc) {
+        const key = desc.id || this.getKey(); // Użyj desc.id jeśli dostępne, w przeciwnym razie fallback do getKey()
         if (desc.type === 'table') {
-            return <Table desc={desc} key={this.getKey()} />;
+            return <Table desc={desc} key={key} />;
         }
         if (desc.type === 'nested_table') {
-            return <Table desc={desc} key={this.getKey()} />;
+            return <Table desc={desc} key={key} />;
         }
         if (desc.type === 'vertTable') {
-            return <VertTable desc={desc} key={this.getKey()} />;
+            return <VertTable desc={desc} key={key} />;
         }
         if (desc.type === 'success') {
-            return <Info desc={desc} key={this.getKey()} type="success" />;
+            return <Info desc={desc} key={key} type="success" />;
         }
         if (desc.type === 'info') {
-            return <Info desc={desc} key={this.getKey()} />;
+            return <Info desc={desc} key={key} />;
         }
         if (desc.type === 'warning') {
-            return <Info desc={desc} key={this.getKey()} type="warning" />;
+            return <Info desc={desc} key={key} type="warning" />;
         }
         if (desc.type === 'error') {
-            return <Info desc={desc} key={this.getKey()} type="error" />;
+            return <Info desc={desc} key={key} type="error" />;
         }
         if (desc.type === 'diagram') {
-            return <ReportDiagram desc={desc} key={this.getKey()} />;
+            return <ReportDiagram desc={desc} key={key} />;
         }
         if (desc.type === 'html') {
-            return <Html desc={desc} key={this.getKey()} />;
+            return <Html desc={desc} key={key} />;
         }
         if (desc.type === 'download') {
-            return <Download desc={desc} key={this.getKey()} />;
+            return <Download desc={desc} key={key} />;
         }
         if (desc.type === 'action') {
-            return <Action desc={desc} onExecute={(token, callback) => this.props.onActionExecute(token, callback)} key={this.getKey()} />;
+            return <Action desc={desc} onExecute={(token, callback) => this.props.onActionExecute(token, callback)} key={key} />;
         }
         if (desc.type === 'republika') {
             return (
-                <div key={this.getKey()}>
+                <div key={key}>
                     {desc.title ? <h4 className="reportTabletitle">{desc.title}</h4> : null}
                     <RepublikaEventStreamView eventStream={desc.data} />
                 </div>
             );
         }
-        return <pre key={this.getKey()}>{desc.type + '\n' + JSON.stringify(desc)}</pre>;
+        return <pre key={key}>{desc.type + '\n' + JSON.stringify(desc)}</pre>;
     }
 
     render() {
-        if (this.props.content !== undefined) {
+        const {
+            content,
+            results = [], // Default to empty array
+            working,
+            progress,
+            showPartialResults,
+            setShowPartialResults,
+            errors = [], // Default to empty array
+            totalPages = 1, // Default to 1
+            currentPage = 1, // Default to 1
+            onPaginate,
+        } = this.props;
+
+        if (content !== undefined) {
             return (
                 <div className="reportView oneShot">
-                    {this.props.content.map(result => this.resultWidget(result))}
+                    {content.map(result => this.resultWidget(result))}
                 </div>
             );
         }
 
-        const resultsWithoutBase64File = this.props.results
-            ? this.props.results.filter(r => r.type !== 'base64file' && r.type !== 'files')
+        const resultsWithoutBase64File = Array.isArray(results)
+            ? results.filter(r => r.type !== 'base64file' && r.type !== 'files')
             : [];
 
         if (resultsWithoutBase64File.length === 0) {
@@ -246,23 +261,34 @@ class ReportView extends React.Component {
 
         return (
             <div className="reportView">
-                {(!this.props.working || this.props.progress === 1) ? null :
+                {(!working || progress === 1) ? null :
                     <div>
-                        {this.props.progress === null
+                        {progress === null
                             ? <ProgressBar animate={true} />
-                            : <ProgressBar value={this.props.progress || null} animate={true} />}
+                            : <ProgressBar value={progress || null} animate={true} />}
                         <div style={{ textAlign: 'right' }}>
                             <Switch id="show_partial_results" style={{ display: "inline" }}
-                                checked={this.props.showPartialResults}
-                                onChange={e => this.props.setShowPartialResults(e.target.checked)} />
+                                checked={showPartialResults}
+                                onChange={e => setShowPartialResults(e.target.checked)} />
                             <label htmlFor="show_partial_results">Pokaż wyniki częściowe</label>
                         </div>
                     </div>
                 }
-                {this.props.errors !== null && this.props.errors.length > 0 ? this.props.errors.map(error => (
-                    <Callout icon="error" intent="danger" key={error}>{error}</Callout>
-                )) : null}
+                {errors.length > 0 && (
+                    errors.map(error => (
+                        <Callout icon="error" intent="danger" key={error}>{error}</Callout>
+                    ))
+                )}
                 {resultsWithoutBase64File.map(result => this.resultWidget(result))}
+                {totalPages > 1 && (
+                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+                        <Pagination
+                            totalCount={totalPages}
+                            current={currentPage}
+                            onPaginate={onPaginate}
+                        />
+                    </div>
+                )}
             </div>
         );
     }

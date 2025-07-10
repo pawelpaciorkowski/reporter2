@@ -113,7 +113,7 @@ class Dialog extends React.Component {
             result[elem.field] = value;
         }
         if (elem.hasOwnProperty('children')) {
-            for (let i = 0; i < elem.children; i++) {
+            for (let i = 0; i < elem.children.length; i++) {
                 let sub_res = this.getInitialValues(elem.children[i][1]);
                 for (var k in sub_res) {
                     if (sub_res.hasOwnProperty(k)) {
@@ -158,7 +158,7 @@ class Dialog extends React.Component {
             return (
                 <Callout key={key} title={title}>
                     <Formik {...formikParams}>
-                        {({isSubmitting, setFieldValue, values}) => (<Form>
+                        {({isSubmitting, setFieldValue, values}) => (<Form key={this.props.path}>
                             {desc.children.map(cld => this.buildFromDefinition(cld))}
                         </Form>)}
                     </Formik>

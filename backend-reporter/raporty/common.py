@@ -42,17 +42,49 @@ def generic_get_result(ident):
     return res
 
 
-def get_report_result(plugin, ident):
-    if hasattr(plugin, 'get_result'):
-        result = plugin.get_result(ident)
-    else:
-        result = generic_get_result(ident)
+def get_report_result(plugin, ident, page=1, page_size=20):
+    task_group = TaskGroup.load(ident)
+    if task_group is None:
+        return {
+            'errors': [
+                'Nie znaleziono TaskGroup - raport anulowany lub brak TaskGroup.save()?'
+            ],
+            'results': [],
+            'actions': [],
+            'progress': 1.0,
+        }
+
+    original_params = task_group.params.copy() if task_group.params else {}
+    current_request_params = {**original_params, 'page': page, 'pageSize': page_size}
+    temp_task_params = {'params': current_request_params}
+
+    result = {}
+    try:
+        if hasattr(plugin, 'raport'):
+            result = plugin.raport(temp_task_params)
+        else:
+            result = generic_get_result(ident)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        result = {
+            'errors': [f"Błąd podczas generowania strony: {e}"],
+            'results': [],
+            'actions': [],
+            'progress': 1.0,
+        }
+
     if result is None:
         result = {}
+
+    result['progress'] = 1.0
+
     if 'actions' in result:
         result['actions'] = ReportActions(result['actions'])
+
     if hasattr(plugin, 'LAUNCH_DIALOG'):
-        task_group = TaskGroup.load(ident)
         if task_group is not None and hasattr(task_group, 'params'):
             result['params'] = plugin.LAUNCH_DIALOG.prettify_params(task_group.params)
+    
     return result

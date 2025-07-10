@@ -128,6 +128,9 @@ class ReportResult(ReportResource):
     def get(self, report_type, ident, user_id, user_login, user_permissions):
         show_partial_results = request.args.get('show_partial_results', '0') == '1'
         without_results = request.args.get('results', '1') == '0'
+        page = int(request.args.get('page', 1))
+        page_size = int(request.args.get('pageSize', 20))
+
         plugin = self.get_plugin_for_report_type(report_type)
         if plugin is None:
             raise Exception('Nie znaleziono pluginu', report_type)
@@ -138,7 +141,10 @@ class ReportResult(ReportResource):
                 return {
                     'progress': task_group.progress, 'errors': [], 'results': [],
                 }
-        result = get_report_result(plugin, ident)
+        
+        # Pass pagination parameters to get_report_result
+        result = get_report_result(plugin, ident, page=page, page_size=page_size)
+        
         if result.get('progress', 0) == 1 and task_group is not None:
             task_group.log_event(user_id, 'REPVIEW')
         if 'actions' in result:
