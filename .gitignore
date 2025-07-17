@@ -20,3 +20,4 @@ backup
 *.ipynb
 demo.docx
 .~*
+backend-reporter/.venv/
