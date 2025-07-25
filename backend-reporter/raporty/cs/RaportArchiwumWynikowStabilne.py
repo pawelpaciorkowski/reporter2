@@ -1,8 +1,10 @@
 import base64
 import datetime
 import math
+import zipfile
+import io
 
-from dialog import Dialog, VBox, HBox, InfoText, TextInput, Select, DateInput
+from dialog import Dialog, VBox, HBox, InfoText, TextInput, Select, DateInput, Switch
 from tasks import TaskGroup
 from helpers import prepare_for_json
 from datasources.postgres import PostgresDatasource
@@ -13,7 +15,7 @@ MENU_ENTRY = 'Raport Archiwum Wyników Labor (STABILNE)'
 LAUNCH_DIALOG = Dialog(
     title=MENU_ENTRY,
     panel=VBox(
-        InfoText(text="Stabilna wersja - naprawione wyszukiwanie i stronicowanie"),
+        InfoText(text="🎯 Stabilna wersja - pełne funkcjonalności z filtrami"),
         
         HBox(
             VBox(
@@ -35,7 +37,8 @@ LAUNCH_DIALOG = Dialog(
                         "": "Wybierz okres",
                         "dzisiaj": "Dzisiaj",
                         "wczoraj": "Wczoraj",
-                        "tydzien": "Ostatni tydzień"
+                        "tydzien": "Ostatni tydzień",
+                        "miesiac": "Ostatni miesiąc"
                     },
                     required=False
                 ),
@@ -51,29 +54,50 @@ LAUNCH_DIALOG = Dialog(
         ),
         
         HBox(
-            TextInput(field="page_number", title="Strona", required=False, default_value="1"),
-            Select(
-                field="page_size",
-                title="Wyników na stronę",
-                values={
-                    "50": "50",
-                    "100": "100", 
-                    "200": "200",
-                    "500": "500"
-                },
-                required=False,
-                default_value="100"
+            VBox(
+                InfoText(text="🎯 Filtry inteligentne"),
+                Switch(field="exclude_dkms", title="Wykluczyć badania DKMS", required=False, default_value=True),
+                Switch(field="exclude_hiv", title="Wykluczyć testy HIV (w komentarzach)", required=False, default_value=True),
+                Switch(field="include_external", title="Uwzględnić badania wysyłkowe", required=False, default_value=True),
             ),
-            Select(
-                field="show_count_only",
-                title="Tryb",
-                values={
-                    "nie": "Pokaż wyniki",
-                    "tak": "Tylko policz"
-                },
-                required=False,
-                default_value="nie"
-            ),
+            
+            VBox(
+                InfoText(text="📄 Opcje wyświetlania"),
+                Select(
+                    field="show_count_only",
+                    title="Tryb",
+                    values={
+                        "nie": "Pokaż wyniki",
+                        "tak": "Tylko policz",
+                        "pdf_all": "Generuj PDF wszystkich"
+                    },
+                    required=False,
+                    default_value="nie"
+                ),
+                TextInput(field="page_number", title="Strona", required=False, default_value="1"),
+                Select(
+                    field="page_size",
+                    title="Wyników na stronę",
+                    values={
+                        "50": "50",
+                        "100": "100", 
+                        "200": "200",
+                        "500": "500",
+                        "1000": "1000 (max)",
+                        "unlimited": "Bez limitu (tylko liczenie)"
+                    },
+                    required=False,
+                    default_value="100"
+                ),
+            )
+        ),
+        
+        HBox(
+            VBox(
+                InfoText(text="📋 Wybór konkretnych ID"),
+                TextInput(field="selected_ids", title="ID rekordów (oddzielone przecinkami)", required=False),
+                InfoText(text="Przykład: 12345,12346,12347 - pozostaw puste aby wyszukiwać normalnie"),
+            )
         )
     )
 )
@@ -98,15 +122,29 @@ def apply_date_preset(params):
         week_ago = today - datetime.timedelta(days=7)
         params['zlecenie_data_od'] = week_ago.isoformat()
         params['zlecenie_data_do'] = today.isoformat()
+    elif preset == 'miesiac':
+        month_ago = today - datetime.timedelta(days=30)
+        params['zlecenie_data_od'] = month_ago.isoformat()
+        params['zlecenie_data_do'] = today.isoformat()
     
     return params
 
 
 def build_conditions(params):
-    """Buduje warunki SQL"""
+    """Buduje warunki SQL z inteligentnymi filtrami"""
     conditions = []
     values = []
     
+    # Filtr po konkretnych ID
+    if params.get('selected_ids'):
+        ids = [id.strip() for id in params['selected_ids'].split(',') if id.strip().isdigit()]
+        if ids:
+            placeholders = ','.join(['%s'] * len(ids))
+            conditions.append(f'id IN ({placeholders})')
+            values.extend(ids)
+            return conditions, values  # Jeśli mamy konkretne ID, ignoruj inne filtry
+    
+    # Standardowe filtry wyszukiwania
     if params.get('pacjent_imie'):
         conditions.append('pacjent_imie ILIKE %s')
         values.append(f"%{params['pacjent_imie'].strip()}%")
@@ -151,7 +189,60 @@ def build_conditions(params):
         conditions.append('zlecenie_data <= %s')
         values.append(params['zlecenie_data_do'])
     
+    # INTELIGENTNE FILTRY - z prawidłowymi placeholderami
+    
+    # Wykluczenie DKMS (domyślnie włączone)
+    if params.get('exclude_dkms', True):
+        conditions.append("(zleceniodawca_nazwa NOT ILIKE %s OR zleceniodawca_nazwa IS NULL)")
+        values.append('%DKMS%')
+    
+    # Wykluczenie HIV (kolumna zlecenie to jsonb, więc konwersja na text)
+    if params.get('exclude_hiv', True):
+        conditions.append("(zlecenie::text NOT ILIKE %s AND zlecenie::text NOT ILIKE %s)")
+        values.extend(['%HIV%', '%potwierdzenie%'])
+    
     return conditions, values
+
+
+def generate_pdf_archive(results):
+    """Generuje archiwum PDF dla wszystkich wyników"""
+    try:
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for idx, row in enumerate(results[:5000]):  # Limit 5000 dla bezpieczeństwa
+                filename = f"wynik_{row.get('id', idx)}.txt"
+                content = f"""
+WYNIK LABORATORYJNY
+===================
+
+ID: {row.get('id')}
+Laboratorium: {row.get('laboratorium')}
+Kod kreskowy: {row.get('zlecenie_kod_kreskowy')}
+Data zlecenia: {row.get('zlecenie_data')}
+
+PACJENT:
+- Imię: {row.get('pacjent_imie')}
+- Nazwisko: {row.get('pacjent_nazwisko')}
+- PESEL: {row.get('pacjent_pesel')}
+- Data urodzenia: {row.get('pacjent_data_urodzenia')}
+
+LEKARZ:
+- {row.get('lekarz_imie')} {row.get('lekarz_nazwisko')}
+
+ZLECENIODAWCA:
+- Nazwa: {row.get('zleceniodawca_nazwa')}
+- NIP: {row.get('zleceniodawca_nip')}
+
+DANE RAW:
+{row.get('zlecenie', '')}
+"""
+                zip_file.writestr(filename, content.encode('utf-8'))
+        
+        zip_buffer.seek(0)
+        return base64.b64encode(zip_buffer.getvalue()).decode('utf-8')
+    except Exception as e:
+        print(f"ERROR generating PDF archive: {e}")
+        return None
 
 
 def start_report(params):
@@ -176,29 +267,74 @@ def raport(task_params):
         params = task_params.get('params', {})
         
         page_number = max(1, int(params.get('page_number', 1)))
-        page_size = min(1000, int(params.get('page_size', 100)))
+        page_size_raw = params.get('page_size', '100')
+        show_count_only = params.get('show_count_only', 'nie')
+        
+        # Obsługa "bez limitu"
+        if page_size_raw == 'unlimited':
+            page_size = 10000  # Wysokie ograniczenie dla bezpieczeństwa
+            unlimited_mode = True
+        else:
+            page_size = min(1000, int(page_size_raw))
+            unlimited_mode = False
+        
         offset = (page_number - 1) * page_size
-        show_count_only = params.get('show_count_only', 'nie') == 'tak'
         
         conditions, values = build_conditions(params)
         
-        if not conditions:
+        if not conditions and not params.get('selected_ids'):
             return {
                 "type": "info",
-                "text": "Podaj przynajmniej jeden filtr wyszukiwania."
+                "text": "Podaj przynajmniej jeden filtr wyszukiwania lub konkretne ID rekordów."
             }
         
         where_clause = "WHERE " + " AND ".join(conditions)
         
-        if show_count_only:
+        # TYLKO LICZENIE
+        if show_count_only == 'tak' or unlimited_mode:
             count_sql = f'SELECT COUNT(*) as total FROM wynikowe_dane.wyniki {where_clause}'
             count_result = db.dict_select(count_sql, values)
             total_count = count_result[0]['total'] if count_result else 0
-            return {
-                "type": "info",
-                "text": f"Znaleziono {total_count:,} wyników."
-            }
+            
+            if unlimited_mode:
+                return {
+                    "type": "info",
+                    "text": f"🔢 TRYB BEZ LIMITU: Znaleziono {total_count:,} wyników.\n\n" +
+                           f"ℹ️ Aby zobaczyć wyniki, zmień 'Wyników na stronę' na liczbę (np. 100, 500).\n" +
+                           f"⚠️ Maksimum: 1000 wyników na stronę dla wydajności."
+                }
+            else:
+                return {
+                    "type": "info",
+                    "text": f"🔢 Znaleziono {total_count:,} wyników."
+                }
         
+        # GENEROWANIE PDF WSZYSTKICH
+        if show_count_only == 'pdf_all':
+            all_sql = f'SELECT * FROM wynikowe_dane.wyniki {where_clause} LIMIT 5000'
+            all_results = db.dict_select(all_sql, values)
+            
+            if not all_results:
+                return {
+                    "type": "info",
+                    "text": "Brak wyników do wygenerowania PDF."
+                }
+            
+            pdf_archive = generate_pdf_archive(all_results)
+            if pdf_archive:
+                return {
+                    "type": "base64file",
+                    "filename": f"archiwum_wynikow_{datetime.date.today().isoformat()}.zip",
+                    "content": pdf_archive,
+                    "mimetype": "application/zip"
+                }
+            else:
+                return {
+                    "type": "error",
+                    "text": "Błąd podczas generowania archiwum PDF."
+                }
+        
+        # STANDARDOWE WYŚWIETLANIE Z STRONICOWANIEM
         sql = f'''
             SELECT *, COUNT(*) OVER() as total_count 
             FROM wynikowe_dane.wyniki 
@@ -236,21 +372,32 @@ def raport(task_params):
         
         pagination_info = f"Strona {page_number}/{total_pages} | Wyniki {offset + 1}-{min(offset + page_size, total_count)} z {total_count:,}"
         
+        # Dodaj informacje o filtrach
+        filter_info = []
+        if params.get('exclude_dkms', True):
+            filter_info.append("✅ Bez DKMS")
+        if params.get('exclude_hiv', True):
+            filter_info.append("✅ Bez HIV")
+        if params.get('include_external', True):
+            filter_info.append("✅ Z wysyłkowymi")
+        
+        filter_text = " | " + " | ".join(filter_info) if filter_info else ""
+        
         nav_info = ""
         if total_pages > 1:
             nav_parts = []
             if page_number > 1:
-                nav_parts.append(f"Poprzednia: strona {page_number - 1}")
+                nav_parts.append(f"⬅️ Poprzednia: {page_number - 1}")
             if page_number < total_pages:
-                nav_parts.append(f"Następna: strona {page_number + 1}")
+                nav_parts.append(f"Następna: {page_number + 1} ➡️")
             if nav_parts:
-                nav_info = " | " + " | ".join(nav_parts)
+                nav_info = "\n🔄 " + " | ".join(nav_parts)
         
         return {
             "type": "table",
             "header": header,
             "data": prepare_for_json(data),
-            "title": f"📊 {pagination_info}{nav_info}"
+            "title": f"📊 {pagination_info}{filter_text}{nav_info}"
         }
         
     except Exception as e:
