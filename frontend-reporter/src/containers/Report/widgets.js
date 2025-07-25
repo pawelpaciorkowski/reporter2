@@ -145,7 +145,6 @@ const Table = props => {
         </tr>
         for (let r in rows) {
             let row_cells = [];
-            console.log(rows[r], rows, r)
             rows[r].map(td => row_cells.push(td))
             rows_html.push(<tr>{row_cells}</tr>)
         }
@@ -155,12 +154,18 @@ const Table = props => {
 
     let desc = props.desc;
     let classes = "reportTable";
+
+    // Debug logging
+    console.log('Table rendering with desc:', desc);
+    console.log('Data exists:', !!desc.data);
+    console.log('Data length:', desc.data ? desc.data.length : 'no data');
+
     return (<div>
         {desc.title ? <h4 className="reportTabletitle">{desc.title}</h4> : null}
         <table className={classes}>
             {renderHeader(desc.header)}
             <tbody>
-                {desc.data.map(row => renderRow(row))}
+                {desc.data && desc.data.map(row => renderRow(row))}
             </tbody>
         </table>
     </div>)
@@ -194,7 +199,7 @@ class VertTable extends React.Component {
             {desc.title ? <h4 className="reportTabletitle">{desc.title}</h4> : null}
             <table className={classes}>
                 <tbody>
-                    {desc.data.map(row => this.renderRow(row))}
+                    {desc.data && desc.data.map(row => this.renderRow(row))}
                 </tbody>
             </table>
         </div>)

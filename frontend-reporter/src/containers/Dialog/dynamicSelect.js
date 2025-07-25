@@ -1,6 +1,6 @@
 import React from "react";
-import {withAPI} from "../../modules/api";
-import {HTMLSelect, Switch, Spinner} from "@blueprintjs/core";
+import { withAPI } from "../../modules/api";
+import { HTMLSelect, Switch, Spinner } from "@blueprintjs/core";
 class DynamicSelect extends React.Component {
     state = {
         widgetData: null,
@@ -9,8 +9,8 @@ class DynamicSelect extends React.Component {
     componentDidMount() {
         const field_id = this.props.id;
         const default_data = this.props.defaultData;
-        if (this.hasDefaultValue())(
-            this.setState({widgetData: default_data[field_id]})
+        if (this.hasDefaultValue()) (
+            this.setState({ widgetData: default_data[field_id] })
         )
         this.reloadIfNeeded();
     }
@@ -25,10 +25,10 @@ class DynamicSelect extends React.Component {
 
         if (this.state.widgetData === null && !this.hasDefaultValue()) {
             this.props.onWidgetDataNeed().then(resp => {
-                this.setState({widgetData: resp});
+                this.setState({ widgetData: resp });
                 if ((this.props.value === null || this.props.value === undefined)
                     && !this.props.definition.multiselect) {
-                    if (resp !== null && resp.length > 0) {
+                    if (resp && resp.length > 0) {
                         this.props.onValueChange(resp[0].value);
                     }
                 }
@@ -40,7 +40,7 @@ class DynamicSelect extends React.Component {
         const field_id = this.props.id;
         const default_data = this.props.defaultData;
 
-        if(default_data === undefined) {
+        if (default_data === undefined) {
             return false;
         }
 
@@ -48,7 +48,7 @@ class DynamicSelect extends React.Component {
     }
 
     renderMultiSelect() {
-        let switch_id =  this.props.id+'_select_all';
+        let switch_id = this.props.id + '_select_all';
         let selectRef = React.createRef();
         let changeSelechAll = (e) => {
             let checked = e.target.checked;
@@ -88,8 +88,8 @@ class DynamicSelect extends React.Component {
         let collectSelected = () => {
 
             let selected = [];
-            for(var cld of selectRef.current.children) {
-                if(cld.selected) {
+            for (var cld of selectRef.current.children) {
+                if (cld.selected) {
                     selected.push(cld.value);
                 }
             }
@@ -104,11 +104,11 @@ class DynamicSelect extends React.Component {
         // }
 
         return (<div>
-            <select style={{width: '90%'}} multiple={true} size={8} ref={selectRef}
-                    onChange={() => collectSelected()}
+            <select style={{ width: '90%' }} multiple={true} size={8} ref={selectRef}
+                onChange={() => collectSelected()}
                 title="Kliknij przytrzymując CTRL lub SHIFT aby zaznaczyć wiele pozycji"
                 defaultValue={defaultDataAsArray()}
-                >
+            >
                 {this.state.widgetData.map(option => {
                     return <option
                         key={option.value}
@@ -125,22 +125,22 @@ class DynamicSelect extends React.Component {
     }
 
     renderSingleSelect() {
-        if(this.props.disabled) {
+        if (this.props.disabled) {
             return <span>{this.props.value}</span>
         }
         return <HTMLSelect options={this.state.widgetData} value={this.state.value ? this.state.value : this.props.value} disabled={this.props.disabled}
             onChange={(e) => {
                 this.props.onValueChange(e.target.value)
-                this.setState({value: e.target.value})
+                this.setState({ value: e.target.value })
             }
-            }/>
+            } />
     }
 
     render() {
-        if(this.state.widgetData === null || this.state.widgetData === undefined) {
-            return <span><Spinner size={Spinner.SIZE_SMALL}/></span>;
+        if (this.state.widgetData === null || this.state.widgetData === undefined) {
+            return <span><Spinner size={Spinner.SIZE_SMALL} /></span>;
         }
-        if(this.props.definition.multiselect) {
+        if (this.props.definition.multiselect) {
             return this.renderMultiSelect();
         } else {
             return this.renderSingleSelect();

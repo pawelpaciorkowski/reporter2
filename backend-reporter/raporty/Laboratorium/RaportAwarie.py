@@ -19,10 +19,20 @@ LAUNCH_DIALOG = Dialog(
             field="device_type",
             title="Rodzaj sprzętu",
             values={
-                "": "Filtruj po rodzaju",  # Domyślna opcja: brak wyboru
+                "": "Filtruj po rodzaju",
                 "Sprzęt pomocniczy": "Sprzęt pomocniczy",
                 "Sprzęt pomiarowy": "Sprzęt pomiarowy",
                 "Wyposażenie dodatkowe": "Wyposażenie dodatkowe",
+            },
+            required=False,
+        ),
+        Select(
+            field="failure_type",
+            title="Typ awarii",
+            values={
+                "": "Filtruj po typie awarii",
+                "Krytyczna": "Krytyczna",
+                "Częściowa": "Częściowa",
             },
             required=False,
         ),
@@ -34,35 +44,18 @@ LAUNCH_DIALOG = Dialog(
 def start_report(params):
     loaded_params = LAUNCH_DIALOG.load_params(params)
 
-    print(f"DEBUG: RAW params before load: {params}")
-    print(f"DEBUG: Loaded params from Dialog: {loaded_params}")
-
-    # Pola tekstowe — oczyszczanie z pustych wartości
-    text_fields = [
-        'model_name', 'symbol', 'serial_number', 'workshop_name',
-        'laboratory_name', 'manufacturer', 'device_type'
-    ]
-    
     for field in [
-    'model_name', 'symbol', 'serial_number', 'workshop_name',
-    'laboratory_name', 'manufacturer'
+        'model_name', 'symbol', 'serial_number', 'workshop_name',
+        'laboratory_name', 'manufacturer', 'device_type', 'failure_type'
     ]:
-     value = loaded_params.get(field)
-    if isinstance(value, str):
-        value = value.strip()
-        if value == '':
-            value = None
-    loaded_params[field] = value
-
-    # Upewniamy się, że device_type jest listą lub None
-    device_type = loaded_params.get('device_type')
-    if not device_type:
-        loaded_params['device_type'] = None
-
-    print(f"DEBUG: Final params used for task: {loaded_params}")
+        value = loaded_params.get(field)
+        if isinstance(value, str):
+            value = value.strip()
+            if value == '':
+                value = None
+        loaded_params[field] = value
 
     report = TaskGroup(__PLUGIN__, loaded_params)
-
     task = {
         'type': 'ick',
         'priority': 0,
@@ -71,12 +64,9 @@ def start_report(params):
     }
     report.create_task(task)
     report.save()
-
     return report
 
 def raport(task_params):
-    print(f"DEBUG: TASK PARAMS W RAPORCIE: {task_params}")
-
     params = task_params.get('params', {}) if task_params else {}
 
     awarie = Awarie()
@@ -89,46 +79,60 @@ def raport(task_params):
         laboratory_name=params.get('laboratory_name'),
         manufacturer=params.get('manufacturer'),
         device_type=params.get('device_type'),
+        failure_type=params.get('failure_type'),
         date_from=params.get('date_from'),
         date_to=params.get('date_to'),
-    )
+    ) or ([], [])
 
     header = [
-    'Nazwa urządzenia', 'Symbol', 'Numer seryjny', 'Producent', 'Rodzaj serwisu',
-    'Data zgłoszenia', 'Data przybycia', 'Data zakończenia', 'Firma serwisująca', 'Koszt',
-    'Czas przestoju (godziny)', 'Nr raportu serwisowego', 'Laboratorium',
-    'Pracownia', 'Rodzaj sprzętu'
-]
-
+        'Nazwa urządzenia', 'Symbol', 'Numer seryjny', 'Producent', 'Rodzaj serwisu',
+        'Typ awarii',  
+        'Data zgłoszenia', 'Data przybycia', 'Data zakończenia', 'Firma serwisująca', 'Koszt',
+        'Czas przestoju (godziny)', 'Nr raportu serwisowego', 'Laboratorium',
+        'Pracownia', 'Rodzaj sprzętu'
+    ]
 
     data = []
     for row in rows:
         row = list(row)
 
-        # Liczymy czas przestoju (data zakończenia - data zgłoszenia)
         data_zgloszenia = row[5]
         data_zakonczenia = row[7]
 
+        # Bezpieczne parsowanie dat - obsługa błędów dla nieprawidłowych formatów
         if isinstance(data_zgloszenia, str):
-            data_zgloszenia = datetime.fromisoformat(data_zgloszenia)
+            try:
+                data_zgloszenia = datetime.datetime.fromisoformat(data_zgloszenia)
+            except ValueError:
+                # Jeśli nie można sparsować daty (np. tekst "Częściowa"), zostaw jako string
+                pass
+        
         if isinstance(data_zakonczenia, str):
-            data_zakonczenia = datetime.fromisoformat(data_zakonczenia)
+            try:
+                data_zakonczenia = datetime.datetime.fromisoformat(data_zakonczenia)
+            except ValueError:
+                # Jeśli nie można sparsować daty, zostaw jako string
+                pass
 
-        if data_zgloszenia and data_zakonczenia:
+        # Oblicz czas przestoju tylko jeśli obie daty to obiekty datetime
+        if (data_zgloszenia and data_zakonczenia and 
+            isinstance(data_zgloszenia, datetime.datetime) and 
+            isinstance(data_zakonczenia, datetime.datetime)):
             try:
                 downtime_hours = (data_zakonczenia - data_zgloszenia).total_seconds() / 3600
                 row[10] = round(downtime_hours, 2)
             except Exception as e:
-                print(f"Error calculating downtime: {e}")
+                print(f"Błąd przy obliczaniu czasu przestoju: {e}")
                 row[10] = None
         else:
-            row[10] = None
-
+            # Jeśli nie można obliczyć czasu przestoju (nieprawidłowe daty), ustaw None
+            if len(row) > 10:
+                row[10] = None
 
         data.append(row)
 
     return {
         "type": "table",
         "header": header,
-        "data": prepare_for_json(data)
+        "data": prepare_for_json(data if data is not None else [])
     }

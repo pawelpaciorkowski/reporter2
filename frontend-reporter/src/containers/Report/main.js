@@ -9,7 +9,6 @@ import "./main.css";
 import NewsAndDocs from "../NewsAndDocs/main";
 
 class ReportMain extends React.Component {
-    timeouts = [];
     state = {
         path: null,
         dialog_path: null,
@@ -22,9 +21,6 @@ class ReportMain extends React.Component {
         actions: null,
         errorCnt: 0,
         showPartialResults: false,
-        currentPage: 1,
-        totalPages: 1,
-        pageSize: 20, // Domyślny rozmiar strony
     };
 
     constructor(props) {
@@ -38,10 +34,6 @@ class ReportMain extends React.Component {
 
     componentDidUpdate(prevProps, prevState, snapshot) {
         this.reloadIfNeeded()
-    }
-
-    componentWillUnmount() {
-        this.timeouts.forEach(clearTimeout);
     }
 
     shouldComponentUpdate(nextProps, nextState, nextContext) {
@@ -98,22 +90,18 @@ class ReportMain extends React.Component {
         }
     }
 
-    launchReport(showResults, page = 1) {
+    launchReport(showResults) {
         let api = this.props.getREST();
         let url = 'report/start/' + this.state.path;
         let params = this.launchDialogRef.current.getData();
-
-        // Dodaj parametry paginacji
-        params.page = page;
-        params.pageSize = this.state.pageSize;
-
+        // console.log('launchReport', url, params);
         this.setState((state) => {
             state.working = true;
             state.progress = 0.0;
-            state.currentPage = page;
         });
-
+        // console.log('post', url)
         api.post(url, params).then((resp) => {
+            // console.log('post result', resp)
             if (resp !== null) {
                 let newState = null;
                 if (resp.hasOwnProperty('ident')) {
@@ -129,19 +117,20 @@ class ReportMain extends React.Component {
                 }
                 if (this.props.isWsAuthorized()) {
                     setTimeout(() => this.monitorReport(showResults), 500);
+                    // TODO: tu monitorować przez WebSocket, a nie odpytywaniem resta!
                 } else {
                     setTimeout(() => this.monitorReport(showResults), 500);
                 }
             }
         }, (reason) => {
+            // console.log('post', reason);
             this.setState({ working: false })
         });
     }
 
     monitorReport(showResults, round) {
-        console.log(`monitorReport: Called with showResults=${showResults}, round=${round}`);
+        // console.log('monitor')
         if (this.state.ident === null) {
-            console.log("monitorReport: ident is null, returning.");
             return;
         }
         if (round === undefined) {
@@ -149,23 +138,11 @@ class ReportMain extends React.Component {
         }
         let api = this.props.getREST();
         let url = 'report/result/' + this.state.path + '/' + this.state.ident;
-        
-        const queryParams = [];
         if (!showResults) {
-            queryParams.push('results=0');
+            url += '?results=0';
         } else if (this.state.showPartialResults) {
-            queryParams.push('show_partial_results=1');
+            url += '?show_partial_results=1'
         }
-        // Dodaj parametry paginacji do URL
-        queryParams.push(`page=${this.state.currentPage}`);
-        queryParams.push(`pageSize=${this.state.pageSize}`);
-
-        if (queryParams.length > 0) {
-            url += '?' + queryParams.join('&');
-        }
-
-        console.log(`monitorReport: Fetching URL: ${url}`);
-
         let nextCheck = 500;
         let errorNextCheck = 2000;
         if (round > 5) {
@@ -174,61 +151,36 @@ class ReportMain extends React.Component {
         if (round > 10) {
             nextCheck = 10000;
         }
-
+        // console.log('monitor get')
         api.get(url).then((resp) => {
-            console.log("monitorReport: Received response:", resp);
-            let newState = {
-                progress: resp.progress,
-                errors: resp.errors,
-                errorCnt: 0,
-            };
-
-            let newResults = resp.results;
-            let newTotalPages = this.state.totalPages;
-            let newCurrentPage = this.state.currentPage;
-
-            if (Array.isArray(resp.results)) {
-                const paginationIndex = resp.results.findIndex(item => item.type === "pagination");
-                if (paginationIndex !== -1) {
-                    const paginationData = resp.results[paginationIndex];
-                    newTotalPages = paginationData.total_pages;
-                    newCurrentPage = paginationData.current_page;
-                    newResults = resp.results.filter((_, index) => index !== paginationIndex);
+            console.log('API Response:', resp);
+            console.log('Response has results?', !!resp.results);
+            console.log('Response type:', resp.type);
+            // console.log('monitor resp', resp);
+            if (this.state.progress !== resp.progress) {
+                let newState = {
+                    result: resp,
+                    progress: resp.progress,
+                    errors: resp.errors,
+                    errorCnt: 0,
+                };
+                if (resp.progress === 1) {
+                    newState.actions = resp.actions;
+                    newState.working = false;
+                } else {
+                    newState.actions = null;
+                    setTimeout(() => this.monitorReport(showResults, round + 1), nextCheck);
                 }
+                this.setState(newState);
+            } else if (resp.progress !== 1.0) {
+                setTimeout(() => this.monitorReport(showResults, round + 1), nextCheck);
             }
-
-            newState.result = { ...resp, results: newResults };
-            newState.totalPages = newTotalPages;
-            newState.currentPage = newCurrentPage;
-
-            if (resp.progress === 1) {
-                newState.actions = resp.actions;
-                newState.working = false;
-            } else {
-                newState.actions = null;
-                this.timeouts.push(setTimeout(() => this.monitorReport(showResults, round + 1), nextCheck));
-            }
-            this.setState(newState);
         }, (reason) => {
-            console.error("monitorReport: API call failed:", reason);
             if (this.state.errorCnt < 3) {
-                this.timeouts.push(setTimeout(() => this.monitorReport(showResults, round + 1), errorNextCheck + nextCheck));
+                setTimeout(() => this.monitorReport(showResults, round + 1), errorNextCheck + nextCheck);
                 this.setState({ errorCnt: this.state.errorCnt + 1 });
             } else {
                 this.setState({ errors: [reason], progress: 1.0, errorCnt: 0 });
-            }
-        });
-    }
-
-    onPaginate = (page) => {
-        console.log(`onPaginate: Attempting to paginate to page ${page}`);
-        this.setState({ currentPage: page }, () => {
-            if (this.state.ident !== null) {
-                console.log(`onPaginate: Report already running (ident: ${this.state.ident}), calling monitorReport.`);
-                this.monitorReport(true);
-            } else {
-                console.log(`onPaginate: Report not running, calling launchReport.`);
-                this.launchReport(true, page);
             }
         });
     }
@@ -266,21 +218,17 @@ class ReportMain extends React.Component {
                     ident={this.state.ident} working={this.state.working}
                     actions={this.state.actions}
                     definition={this.state.definition[2]}
-                    onGenerateStart={(showResults) => this.launchReport(showResults)}
-                    selectedIds={this.state.selectedIds} />
+                    onGenerateStart={(showResults) => this.launchReport(showResults)} />
                 <ReportView path={this.state.path}
                     params={this.state.params} ident={this.state.ident}
                     working={this.state.working}
                     progress={this.state.progress}
-                    results={this.state.result ? this.state.result.results : null}
+                    results={this.state.result ? (this.state.result.results || [this.state.result]) : null}
                     showPartialResults={this.state.showPartialResults}
                     setShowPartialResults={newVal => {
                         this.setState({ showPartialResults: newVal })
                     }}
-                    errors={this.state.errors}
-                    currentPage={this.state.currentPage}
-                    totalPages={this.state.totalPages}
-                    onPaginate={this.onPaginate} />
+                    errors={this.state.errors} />
             </div>
         );
     }

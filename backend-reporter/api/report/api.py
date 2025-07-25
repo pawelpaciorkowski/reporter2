@@ -47,7 +47,7 @@ def check_user_quota(user_id, user_permissions):
                 repgen += 1
             if row['typ'] == 'REPVIEW':
                 repview += 1
-        if repgen - repview >= 9:
+        if repgen - repview >= 99:
             return 'W ciągu ostatniej godziny uruchomiłeś 3 raporty bez czekania na wynik. Nie można uruchomić raportu.'
         return None
 

@@ -16,6 +16,8 @@ def generic_get_result(ident):
             'results': [],
             'actions': [],
             'progress': 1.0,
+            'header': [],
+            'data': []
         }
     res = {
         'errors': [],
@@ -52,6 +54,8 @@ def get_report_result(plugin, ident, page=1, page_size=20):
             'results': [],
             'actions': [],
             'progress': 1.0,
+            'header': [],
+            'data': []
         }
 
     original_params = task_group.params.copy() if task_group.params else {}
@@ -73,6 +77,8 @@ def get_report_result(plugin, ident, page=1, page_size=20):
             'results': [],
             'actions': [],
             'progress': 1.0,
+            'header': [],
+            'data': []
         }
 
     if result is None:
