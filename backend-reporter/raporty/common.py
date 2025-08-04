@@ -59,7 +59,7 @@ def get_report_result(plugin, ident, page=1, page_size=20):
         }
 
     original_params = task_group.params.copy() if task_group.params else {}
-    current_request_params = {**original_params, 'page': page, 'pageSize': page_size}
+    current_request_params = {**original_params, 'page': page, 'page_size': page_size}
     temp_task_params = {'params': current_request_params}
 
     result = {}

@@ -47,7 +47,7 @@ def check_user_quota(user_id, user_permissions):
                 repgen += 1
             if row['typ'] == 'REPVIEW':
                 repview += 1
-        if repgen - repview >= 99:
+        if repgen - repview >= 999:
             return 'W ciągu ostatniej godziny uruchomiłeś 3 raporty bez czekania na wynik. Nie można uruchomić raportu.'
         return None
 
@@ -128,9 +128,6 @@ class ReportResult(ReportResource):
     def get(self, report_type, ident, user_id, user_login, user_permissions):
         show_partial_results = request.args.get('show_partial_results', '0') == '1'
         without_results = request.args.get('results', '1') == '0'
-        page = int(request.args.get('page', 1))
-        page_size = int(request.args.get('pageSize', 20))
-
         plugin = self.get_plugin_for_report_type(report_type)
         if plugin is None:
             raise Exception('Nie znaleziono pluginu', report_type)
@@ -141,10 +138,7 @@ class ReportResult(ReportResource):
                 return {
                     'progress': task_group.progress, 'errors': [], 'results': [],
                 }
-        
-        # Pass pagination parameters to get_report_result
-        result = get_report_result(plugin, ident, page=page, page_size=page_size)
-        
+        result = get_report_result(plugin, ident)
         if result.get('progress', 0) == 1 and task_group is not None:
             task_group.log_event(user_id, 'REPVIEW')
         if 'actions' in result:
@@ -155,7 +149,7 @@ class ReportResult(ReportResource):
 
 
 @ns.route('/action/<string:report_type>/<string:ident>/<string:action_type>/<int:action_index>')
-class ReportResult(ReportResource):
+class ReportAction(ReportResource):
     # TODO XXX - sprawdzać właściciela raportu
     @login_required
     def get(self, report_type, ident, action_type, action_index, user_login, user_permissions):
@@ -165,8 +159,99 @@ class ReportResult(ReportResource):
         self.check_permissions(plugin, user_login, user_permissions)
         result = get_report_result(plugin, ident)
         if 'actions' in result:
+            # Sprawdź czy actions jest już obiektem ReportActions
+            if isinstance(result['actions'], list):
+                from raporty.actions import ReportActions
+                result['actions'] = ReportActions(result['actions'])
             executor = result['actions'].get_action_executor(action_type, action_index)
             if executor is not None:
                 res = executor.execute(plugin, result)
                 return {'status': 'ok', 'result': res}
         return {'status': 'error', 'error': 'Nie można wykonać akcji'}
+    
+
+    
+    def options(self, report_type, ident, action_type, action_index):
+        """Obsługa preflight request dla CORS"""
+        from flask import make_response
+        response = make_response({'status': 'ok'})
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        return response
+    
+    @login_required
+    def post(self, report_type, ident, action_type, action_index, user_login, user_permissions):
+        """Obsługa akcji z danymi z formularza"""
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"DEBUG: POST action - report_type: {report_type}, ident: {ident}, action_type: {action_type}, action_index: {action_index}")
+        print(f"DEBUG: POST action - report_type: {report_type}, ident: {ident}, action_type: {action_type}, action_index: {action_index}")
+        
+        try:
+            plugin = self.get_plugin_for_report_type(report_type)
+            if plugin is None:
+                print(f"ERROR: Nie znaleziono pluginu {report_type}")
+                raise Exception('Nie znaleziono pluginu', report_type)
+            
+            print(f"DEBUG: Plugin found: {plugin}")
+            self.check_permissions(plugin, user_login, user_permissions)
+            
+            # Pobierz dane z formularza
+            form_data = request.json or {}
+            print(f"DEBUG: POST action - form_data: {form_data}")
+            
+            print(f"DEBUG: Getting report result for {ident}")
+            result = get_report_result(plugin, ident)
+            print(f"DEBUG: Report result keys: {list(result.keys()) if isinstance(result, dict) else 'Not a dict'}")
+            print(f"DEBUG: Report result full: {result}")
+            print(f"DEBUG: Report result type: {type(result)}")
+            
+            if 'actions' in result:
+                print(f"DEBUG: Actions found in result")
+                # Sprawdź czy actions jest już obiektem ReportActions
+                if isinstance(result['actions'], list):
+                    print(f"DEBUG: Converting actions list to ReportActions object")
+                    from raporty.actions import ReportActions
+                    result['actions'] = ReportActions(result['actions'])
+                
+                print(f"DEBUG: Getting action executor for {action_type}, index {action_index}")
+                executor = result['actions'].get_action_executor(action_type, action_index)
+                if executor is not None:
+                    print(f"DEBUG: Executor found, executing...")
+                    # Przekaż dane z formularza do executor
+                    res = executor.execute(plugin, result, form_data=form_data)
+                    print(f"DEBUG: Execution successful, returning result")
+                    
+                    # Dodaj nagłówki CORS do odpowiedzi
+                    from flask import make_response
+                    response = make_response({'status': 'ok', 'result': res})
+                    response.headers['Access-Control-Allow-Origin'] = '*'
+                    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+                    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+                    return response
+                else:
+                    print(f"ERROR: Executor not found for {action_type}, index {action_index}")
+            else:
+                print(f"ERROR: No actions found in result")
+            
+            # Dodaj nagłówki CORS do odpowiedzi błędu
+            from flask import make_response
+            response = make_response({'status': 'error', 'error': 'Nie można wykonać akcji'})
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+            return response
+            
+        except Exception as e:
+            print(f"ERROR: Exception in POST action: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            # Dodaj nagłówki CORS do odpowiedzi błędu
+            from flask import make_response
+            response = make_response({'status': 'error', 'error': str(e)})
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+            return response

@@ -36,7 +36,9 @@ class ReportActionExecutor:
             fn = fn_prefix + '_' + fn
         return fn
 
-    def execute(self, plugin, result, timestamp=None, fn_prefix=None):
+    def execute(self, plugin, result, timestamp=None, fn_prefix=None, form_data=None):
+        print(f"DEBUG: ReportActionExecutor.execute - action type: {self.action.get('type')}")
+        
         if 'title' not in self.action:
             if hasattr(plugin, 'LAUNCH_DIALOG'):
                 try:
@@ -45,15 +47,38 @@ class ReportActionExecutor:
                     pass
             if 'title' not in self.action and hasattr(plugin, 'MENU_ENTRY'):
                 self.action['title'] = plugin.MENU_ENTRY
+        
+        # Obsługa customowych akcji button
+        if self.action.get('type') == 'button':
+            action_name = self.action.get('action')
+            if action_name in ['pdf_all', 'pdf_selected']:
+                # Przekaż dane z formularza do start_report
+                if form_data:
+                    form_data['action'] = action_name
+                    return plugin.start_report(form_data)
+                else:
+                    # Fallback - użyj pustych parametrów
+                    return plugin.start_report({'action': action_name})
+        
         if self.action['type'] == 'xlsx':
-            xlsx = ReportXlsx(result, **self.action)
-            content = base64.b64encode(xlsx.render_as_bytes()).decode()
-            return {
-                'type': 'download',
-                'filename': self.get_filename(plugin, result, 'xlsx', timestamp=timestamp, fn_prefix=fn_prefix),
-                'content_type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'content': content
-            }
+            print(f"DEBUG: Creating ReportXlsx object")
+            try:
+                xlsx = ReportXlsx(result, **self.action)
+                print(f"DEBUG: ReportXlsx created successfully")
+                print(f"DEBUG: Rendering XLSX as bytes")
+                content = base64.b64encode(xlsx.render_as_bytes()).decode()
+                print(f"DEBUG: XLSX rendered successfully, content length: {len(content)}")
+                return {
+                    'type': 'download',
+                    'filename': self.get_filename(plugin, result, 'xlsx', timestamp=timestamp, fn_prefix=fn_prefix),
+                    'content_type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'content': content
+                }
+            except Exception as e:
+                print(f"ERROR: Exception in XLSX generation: {e}")
+                import traceback
+                traceback.print_exc()
+                raise
         elif self.action['type'] == 'pdf':
             pdf = ReportPdf(result, **self.action)
             content = base64.b64encode(pdf.render_as_bytes()).decode()

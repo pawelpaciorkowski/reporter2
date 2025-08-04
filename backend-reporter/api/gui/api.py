@@ -172,7 +172,11 @@ class WidgetData(APIResource):
     def post(self, ident, typ, field, user_login, user_permissions):
         plugin = api.plugin_manager.find_plugin_by_path(ident)
         self.check_permissions(plugin, user_login, user_permissions)
-        params = request.json
+        params = request.json or {}
+        
+        # Dodaj ident do params dla widgetów
+        params['ident'] = ident
+        
         dialog = api.plugin_manager.get_dialog_for_user(ident, typ, user_permissions)
         if dialog is not None:
             field = dialog.get_field_by_name(field)

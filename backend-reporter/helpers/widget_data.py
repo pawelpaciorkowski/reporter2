@@ -88,7 +88,8 @@ class WidgetDataProvider:
                 dodaj = False
             if params is not None:
                 search_string = "%s %s %s" % (row[symbol_col], row['nazwa'], row['adres_fresh'])
-                if params.lower() not in search_string.lower():
+                # Sprawdź czy params jest stringiem przed wywołaniem .lower()
+                if isinstance(params, str) and params.lower() not in search_string.lower():
                     dodaj = False
             if not row['aktywne'] and not widget.init_kwargs.get('pokaz_nieaktywne', False):
                 dodaj = False
@@ -263,7 +264,7 @@ class WidgetDataProvider:
             if lab != '' and (lab_filter is None or lab in lab_filter):
                 search_string = punkt.get('name', '') + ' ' + punkt.get('marcel', '') + punkt.get('street', '') + \
                                 (punkt.get('city') or {})['name']
-                if params.lower() in search_string.lower():
+                if isinstance(params, str) and params.lower() in search_string.lower():
                     nazwa = punkt['name'] or ''
                     if nazwa == '':
                         nazwa = (punkt.get('city') or {})['name'] + ' ' + punkt.get('street', '')

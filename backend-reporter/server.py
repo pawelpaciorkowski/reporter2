@@ -1,6 +1,7 @@
 import json
 
 from flask import Flask, Blueprint, render_template, send_from_directory
+from flask_cors import CORS
 import os
 import logging.config
 from plugins import PluginManager
@@ -13,6 +14,7 @@ if cfg.SENTRY_URL is not None:
 
 app = Flask(__name__, static_folder='static/static', template_folder='static', static_url_path='/static/')
 app.config.from_object('config.Config')
+CORS(app, supports_credentials=True, origins=['http://localhost:3000', 'http://127.0.0.1:3000'])
 
 logging_conf_path = os.path.normpath(os.path.join(os.path.dirname(__file__), 'logging.conf'))
 logging.config.fileConfig(logging_conf_path)
@@ -78,11 +80,14 @@ app.json_encoder = JSONEncoder
 
 
 # TODO: zależnie od ustawienia debug / devel
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'content-type, authorization')
-    return response
+# CORS jest teraz obsługiwany przez flask-cors
+# @app.after_request
+# def after_request(response):
+#     response.headers.add('Access-Control-Allow-Origin', '*')
+#     response.headers.add('Access-Control-Allow-Headers', 'content-type, authorization')
+#     response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+#     response.headers.add('Access-Control-Allow-Credentials', 'true')
+#     return response
 
 
 api_blueprint = Blueprint('api', __name__, url_prefix='/api')

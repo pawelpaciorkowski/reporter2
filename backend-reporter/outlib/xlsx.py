@@ -292,6 +292,9 @@ class ReportXlsx:
         return value
 
     def render_to_file(self, fn):
+        print(f"DEBUG: ReportXlsx.render_to_file - data keys: {list(self.data.keys()) if isinstance(self.data, dict) else 'Not a dict'}")
+        print(f"DEBUG: ReportXlsx.render_to_file - data: {self.data}")
+        
         write_only = True
         if 'freeze_before' in self.settings:
             write_only = False
@@ -302,6 +305,22 @@ class ReportXlsx:
             self.ws = self.wb.active
             self.ws.title = 'Dane'
         self.ws_par = self.wb.create_sheet('Parametry')
+        
+        # Sprawdź czy data ma klucz 'results' lub 'data'
+        if 'results' in self.data:
+            results_key = 'results'
+        elif 'data' in self.data:
+            results_key = 'data'
+            # Konwertuj 'data' na format 'results'
+            if isinstance(self.data['data'], list):
+                self.data['results'] = [{'type': 'table', 'header': self.data.get('header', []), 'data': self.data['data']}]
+            else:
+                self.data['results'] = [{'type': 'table', 'header': self.data.get('header', []), 'data': [self.data['data']]}]
+        else:
+            print(f"ERROR: ReportXlsx - data does not have 'results' or 'data' key")
+            print(f"ERROR: Available keys: {list(self.data.keys())}")
+            raise KeyError("'results'")
+            
         if self.settings['flat_table']:
             for subres in self.data['results']:
                 if subres['type'] == 'table':

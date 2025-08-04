@@ -134,5 +134,6 @@ def raport(task_params):
     return {
         "type": "table",
         "header": header,
-        "data": prepare_for_json(data if data is not None else [])
+        "data": prepare_for_json(data if data is not None else []),
+        "actions": ["xlsx"]
     }

@@ -1,8 +1,8 @@
 // https://gist.github.com/prashnts/8959ff4ab1d825de2d3f881ff163a25b
 
 import React, { Component } from 'react';
-import {Button, ButtonGroup, Intent} from '@blueprintjs/core';
-import {IconNames} from "@blueprintjs/icons";
+import { Button, ButtonGroup, Intent } from '@blueprintjs/core';
+import { IconNames } from "@blueprintjs/icons";
 
 const CELL_COUNT = 7
 const CELL_MID_LEN = ~~(CELL_COUNT / 2)
@@ -30,7 +30,7 @@ class Pagination extends Component {
   // In other cases, if p < (CELL_COUNT / 2), {a, b} := {false, true}
   // and if p > (CELL_COUNT / 2), {a, b} := {true, false}.
 
-  constructor (props) {
+  constructor(props) {
     super(props)
     this.state = {
       totalCount: props.totalCount,
@@ -40,14 +40,17 @@ class Pagination extends Component {
     this.paginate = (nr) => props.onPaginate(nr)
   }
 
-  componentWillReceiveProps (props) {
-    this.setState({
-      totalCount: props.totalCount,
-      current: props.current || 1,
-    })
+  static getDerivedStateFromProps(props, state) {
+    if (props.totalCount !== state.totalCount || props.current !== state.current) {
+      return {
+        totalCount: props.totalCount,
+        current: props.current || 1,
+      };
+    }
+    return null;
   }
 
-  getPagingLayout () {
+  getPagingLayout() {
     const totalCount = this.state.totalCount, current = this.state.current
     let pages = []
 
@@ -99,7 +102,7 @@ class Pagination extends Component {
     return pages
   }
 
-  render () {
+  render() {
     const ltEnable = this.state.current > 1
     const rtEnable = this.state.current < this.state.totalCount
     const pages = this.getPagingLayout()
@@ -107,17 +110,17 @@ class Pagination extends Component {
     return (
       <ButtonGroup>
         <Button icon={IconNames.CHEVRON_LEFT} disabled={!ltEnable}
-                onClick={() => this.paginate(this.state.current - 1)} />
+          onClick={() => this.paginate(this.state.current - 1)} />
         {pages.map(p =>
           <Button text={p.ellipsis ? '...' : p.nr}
-                  key={p.nr}
-                  disabled={p.ellipsis}
-                  intent={p.active ? Intent.PRIMARY : Intent.DEFAULT}
-                  onClick={() => this.paginate(p.nr)}/>
+            key={p.nr}
+            disabled={p.ellipsis}
+            intent={p.active ? Intent.PRIMARY : Intent.DEFAULT}
+            onClick={() => this.paginate(p.nr)} />
         )}
         <Button icon={IconNames.CHEVRON_RIGHT}
-                disabled={!rtEnable}
-                onClick={() => this.paginate(this.state.current + 1)}/>
+          disabled={!rtEnable}
+          onClick={() => this.paginate(this.state.current + 1)} />
       </ButtonGroup>
     )
   }

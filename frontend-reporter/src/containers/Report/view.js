@@ -1,6 +1,7 @@
 import React from "react";
 import { ProgressBar, Callout, Switch } from "@blueprintjs/core";
 import { Table, VertTable, Info, ReportDiagram, Download, Action, Html } from "./widgets";
+import { saveBase64As } from "../../modules/fileSaver";
 import "./report.css";
 import { RepublikaEventStreamView } from "../Republika/republika";
 
@@ -16,10 +17,19 @@ class ReportView extends React.Component {
 
 
     resultWidget(desc) {
-        console.log('ReportView.resultWidget called with:', desc);
         if (desc.type === 'table') {
-            console.log('Rendering Table component with data length:', desc.data ? desc.data.length : 'no data');
-            return <Table desc={desc} key={this.getKey()} />;
+            // Użyj stabilnego klucza opartego na danych tabeli
+            const tableKey = `table-${desc.pagination ? desc.pagination.current_page : 'no-pagination'}-${desc.data ? desc.data.length : 0}`;
+            return <div>
+                <Table
+                    desc={desc}
+                    key={tableKey}
+                    onPageChange={this.props.onPageChange}
+                    cachedPages={this.props.cachedPages}
+                    totalPages={this.props.totalPages}
+                    preloadProgress={this.props.preloadProgress}
+                />
+            </div>;
         }
         if (desc.type === 'nested_table') {
             return <Table desc={desc} key={this.getKey()} />;
@@ -46,7 +56,19 @@ class ReportView extends React.Component {
             return <Html desc={desc} key={this.getKey()} />
         }
         if (desc.type === 'download') {
-            return <Download desc={desc} />
+            return <Download desc={desc} onClearState={this.props.onClearState} />
+        }
+        if (desc.type === 'base64file') {
+            // Handle base64file response type for automatic file download
+            const { filename, content, mimetype } = desc;
+            // Trigger download immediately
+            saveBase64As(content, mimetype, filename);
+            // Wyczyść stan po pobraniu pliku
+            if (this.props.onClearState) {
+                setTimeout(() => this.props.onClearState(), 1000);
+            }
+            // Return a success message
+            return <Info desc={{ text: `Plik ${filename} został pobrany automatycznie.` }} type="success" key={this.getKey()} />;
         }
         if (desc.type === 'action') {
             return <Action desc={desc} onExecute={(token, callback) => this.props.onActionExecute(token, callback)} />
@@ -61,11 +83,8 @@ class ReportView extends React.Component {
     }
 
     render() {
-        // Debug logs (can be removed later)
-        console.log('ReportView render - results length:', this.props.results ? this.props.results.length : 'no results');
 
         if (this.props.content !== undefined) {
-            console.log('Using content path with length:', this.props.content.length);
             return (<div className="reportView oneShot">
                 {this.props.content.map(result => this.resultWidget(result))}
             </div>);
@@ -86,7 +105,7 @@ class ReportView extends React.Component {
                 {this.props.errors && this.props.errors.length > 0 ? this.props.errors.map(error => (
                     <Callout icon="error" intent="danger" key={error}>{error}</Callout>
                 )) : null}
-                {this.props.results ? this.props.results.map(result => this.resultWidget(result)) : null}
+                {this.props.results ? this.props.results.map((result, i) => <React.Fragment key={i}>{this.resultWidget(result)}</React.Fragment>) : null}
             </div>
         )
     }

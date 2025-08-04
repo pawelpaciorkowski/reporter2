@@ -2,17 +2,20 @@ import React from "react";
 import { Callout, Button, Dialog } from "@blueprintjs/core";
 import ReportDiagram from "./diagram";
 import { saveBase64As } from "../../modules/fileSaver";
+import Pagination from "../../components/pagination";
 
 
 const Table = props => {
-    let nextKey = 0;
-    let bogusKey = () => nextKey++;
+    // Sprawdź czy to jest raport archiwum wyników (używając flagi z backendu)
+    const isArchiveReport = props.desc && props.desc.show_checkboxes === true;
 
-    const renderHeaderCell = cell => {
+
+
+    const renderHeaderCell = (cell, cellIndex) => {
         if (typeof cell !== "object") {
             cell = { title: cell, fontstyle: 'b' };
         }
-        let attr = { style: {}, key: bogusKey() };
+        let attr = { style: {}, key: cellIndex };
         if (cell.hasOwnProperty('colspan')) {
             attr.colSpan = cell.colspan;
         }
@@ -47,10 +50,27 @@ const Table = props => {
         return <th {...attr}>{cell.title}</th>;
     };
 
-
-    const renderHeaderRow = row => {
-        return (<tr key={bogusKey()}>
-            {row.map(cell => renderHeaderCell(cell))}
+    const renderHeaderRow = (row, rowIndex) => {
+        return (<tr key={rowIndex}>
+            {isArchiveReport && (
+                <th style={{ width: '30px' }}>
+                    <input
+                        type="checkbox"
+                        className="select-all-checkbox"
+                        onChange={(e) => {
+                            const checkboxes = document.querySelectorAll('.row-checkbox');
+                            checkboxes.forEach(cb => cb.checked = e.target.checked);
+                            // Wywołaj funkcję globalną
+                            if (e.target.checked && window.selectAllCheckboxes) {
+                                window.selectAllCheckboxes();
+                            } else if (!e.target.checked && window.deselectAllCheckboxes) {
+                                window.deselectAllCheckboxes();
+                            }
+                        }}
+                    />
+                </th>
+            )}
+            {row.map((cell, cellIndex) => renderHeaderCell(cell, cellIndex))}
         </tr>);
     };
 
@@ -60,14 +80,14 @@ const Table = props => {
         }
         let header = null;
         if (Array.isArray(hdr[0])) {
-            header = hdr.map(row => renderHeaderRow(row));
+            header = hdr.map((row, rowIndex) => renderHeaderRow(row, rowIndex));
         } else {
-            header = renderHeaderRow(hdr);
+            header = renderHeaderRow(hdr, 0);
         }
         return <thead>{header}</thead>
     };
 
-    const renderTableCell = cell => {
+    const renderTableCell = (cell, cellIndex) => {
         if (cell === null || cell === undefined) {
             cell = '';
         }
@@ -75,7 +95,7 @@ const Table = props => {
             cell = { value: cell };
         }
         let wrapper = value => value;
-        let attr = { style: {}, key: bogusKey() };
+        let attr = { style: {}, key: cellIndex };
         if (cell.hasOwnProperty('fontstyle')) {
             if (cell.fontstyle.indexOf('b') !== -1) {
                 attr.style.fontWeight = 'bold';
@@ -118,18 +138,33 @@ const Table = props => {
         }
         return <td {...attr}>{wrapper(cell.value)}</td>;
     };
-    const renderRow = (row) => {
+    const renderRow = (row, rowIndex) => {
         let rows = {};
         let rows_html = [];
-        const resp = <tr key={bogusKey()}>
-            {row.map(cell => {
+        const resp = <tr key={rowIndex}>
+            {isArchiveReport && (
+                <td>
+                    <input
+                        type="checkbox"
+                        className="row-checkbox"
+                        data-id={row[0]} // ID jest w pierwszej kolumnie
+                        onChange={(e) => {
+                            // Wywołaj funkcję globalną
+                            if (window.handleRowCheckbox) {
+                                window.handleRowCheckbox(e.target);
+                            }
+                        }}
+                    />
+                </td>
+            )}
+            {row.map((cell, cellIndex) => {
                 if (Array.isArray(cell)) {
                     let first;
                     for (let i in cell) {
                         if (i === "0") {
-                            first = renderTableCell(cell[i]);
+                            first = renderTableCell(cell[i], `${cellIndex}-0`);
                         } else {
-                            const c = renderTableCell(cell[i])
+                            const c = renderTableCell(cell[i], `${cellIndex}-${i}`)
                             if (!(i in rows)) {
                                 rows[i] = []
                             }
@@ -138,15 +173,16 @@ const Table = props => {
                     }
                     return first;
                 } else {
-                    return renderTableCell(cell);
+                    return renderTableCell(cell, cellIndex);
                 }
             }
             )}
         </tr>
         for (let r in rows) {
             let row_cells = [];
+            console.log(rows[r], rows, r)
             rows[r].map(td => row_cells.push(td))
-            rows_html.push(<tr>{row_cells}</tr>)
+            rows_html.push(<tr key={`sub-row-${r}`}>{row_cells}</tr>)
         }
         rows_html.unshift(resp)
         return rows_html
@@ -155,19 +191,48 @@ const Table = props => {
     let desc = props.desc;
     let classes = "reportTable";
 
-    // Debug logging
-    console.log('Table rendering with desc:', desc);
-    console.log('Data exists:', !!desc.data);
-    console.log('Data length:', desc.data ? desc.data.length : 'no data');
+    // Obsługa paginacji
+    const handlePageChange = (newPage) => {
+        if (props.onPageChange) {
+            props.onPageChange(newPage);
+        }
+    };
 
     return (<div>
         {desc.title ? <h4 className="reportTabletitle">{desc.title}</h4> : null}
         <table className={classes}>
             {renderHeader(desc.header)}
             <tbody>
-                {desc.data && desc.data.map(row => renderRow(row))}
+                {desc.data.map((row, rowIndex) => renderRow(row, rowIndex))}
             </tbody>
         </table>
+
+        {/* Paginacja */}
+        {desc.pagination && (
+            <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                <div style={{ marginBottom: '10px', fontSize: '14px', color: '#666' }}>
+                    Strona {desc.pagination.current_page} z {desc.pagination.total_pages} |
+                    Wyniki {(desc.pagination.current_page - 1) * desc.pagination.page_size + 1} -
+                    {Math.min(desc.pagination.current_page * desc.pagination.page_size, desc.pagination.total_count)}
+                    z {desc.pagination.total_count}
+                    {props.cachedPages && (
+                        <span style={{ marginLeft: '10px', color: '#28a745' }}>
+                            (Cache: {props.cachedPages.size}/{props.totalPages} stron)
+                            {props.preloadProgress === 100 && (
+                                <span style={{ marginLeft: '5px', color: '#28a745' }}>
+                                    ✅ Wszystkie dane załadowane
+                                </span>
+                            )}
+                        </span>
+                    )}
+                </div>
+                <Pagination
+                    totalCount={desc.pagination.total_pages}
+                    current={desc.pagination.current_page}
+                    onPaginate={handlePageChange}
+                />
+            </div>
+        )}
     </div>)
 };
 
@@ -199,7 +264,7 @@ class VertTable extends React.Component {
             {desc.title ? <h4 className="reportTabletitle">{desc.title}</h4> : null}
             <table className={classes}>
                 <tbody>
-                    {desc.data && desc.data.map(row => this.renderRow(row))}
+                    {desc.data.map(row => this.renderRow(row))}
                 </tbody>
             </table>
         </div>)
@@ -233,6 +298,10 @@ class Download extends React.Component {
     doDownload() {
         let desc = this.props.desc;
         saveBase64As(desc.content, desc.content_type, desc.filename);
+        // Wyczyść stan po pobraniu pliku
+        if (this.props.onClearState) {
+            setTimeout(() => this.props.onClearState(), 1000);
+        }
     }
 
     render() {

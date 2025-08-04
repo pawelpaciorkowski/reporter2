@@ -1,4 +1,4 @@
-#!/bin/bash
+pytho   #!/bin/bash
 
 echo "Fast killing all reporter workers..."
 

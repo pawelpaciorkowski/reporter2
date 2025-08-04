@@ -26,29 +26,32 @@ LAUNCH_DIALOG = Dialog(
                 TextInput(
                     field="pacjent_query",
                     title="Imię, Nazwisko, PESEL lub Data urodzenia (po przecinkach)",
-                    required=False
+                    required=False,
+                    default=""
                 ),
                 TextInput(
                     field="zlecenie_data_od",
                     title="Data zlecenia od (RRRR-MM-DD)",
-                    required=False
+                    required=False,
+                    default=""
                 ),
                 TextInput(
                     field="zlecenie_data_do",
                     title="Data zlecenia do (RRRR-MM-DD)",
-                    required=False
+                    required=False,
+                    default=""
                 ),
             ),
 
             # Sekcja: Dane zlecenia i lekarza
             VBox(
                 InfoText(text="Szczegóły zlecenia i lekarza"),
-                TextInput(field="zlecenie_kod_kreskowy", title="Kod kreskowy zlecenia", required=False),
-                TextInput(field="lekarz_imie", title="Imię lekarza", required=False),
-                TextInput(field="lekarz_nazwisko", title="Nazwisko lekarza", required=False),
-                TextInput(field="zleceniodawca_nazwa", title="Nazwa zleceniodawcy", required=False),
-                TextInput(field="zleceniodawca_kod_lsi", title="Kod LSI zleceniodawcy", required=False),
-                TextInput(field="zleceniodawca_nip", title="NIP zleceniodawcy", required=False),
+                TextInput(field="zlecenie_kod_kreskowy", title="Kod kreskowy zlecenia", required=False, default=""),
+                TextInput(field="lekarz_imie", title="Imię lekarza", required=False, default=""),
+                TextInput(field="lekarz_nazwisko", title="Nazwisko lekarza", required=False, default=""),
+                TextInput(field="zleceniodawca_nazwa", title="Nazwa zleceniodawcy", required=False, default=""),
+                TextInput(field="zleceniodawca_kod_lsi", title="Kod LSI zleceniodawcy", required=False, default=""),
+                TextInput(field="zleceniodawca_nip", title="NIP zleceniodawcy", required=False, default=""),
             ),
 
             # Sekcja: Generowanie plików
@@ -72,7 +75,8 @@ LAUNCH_DIALOG = Dialog(
                     field="selected_ids",
                     title="Wybrane ID (oddzielone przecinkami)",
                     required=False,
-                    help_text="Np. 12345,67890,22222"
+                    help_text="Np. 12345,67890,22222",
+                    default=""
                 ),
                 DynamicSelect(
                     field="typ_pliku",
@@ -99,6 +103,7 @@ def get_generate_pdf_options(params):
     return [
         {"label": "Nie – tylko wyświetl wyniki", "value": "nie"},
         {"label": "Tak – pobierz pliki z wynikami", "value": "tak"},
+        {"label": "Tak – pobierz z zaznaczonych checkboxów w tabeli", "value": "zaznaczone"},
     ]
 
 
@@ -155,7 +160,14 @@ def start_report(params):
     if params.get('action') == 'clear_filters':
         return {"type": "clear"}
 
+    # Obsługa paginacji
+    page = int(params.get('page', 1))
+    page_size = int(params.get('page_size', 50))
+    
     params = LAUNCH_DIALOG.load_params(params)
+    params['page'] = page
+    params['page_size'] = page_size
+    
     report = TaskGroup(__PLUGIN__, params)
     task = {
         'type': 'ick',
@@ -171,13 +183,22 @@ def raport(task_params):
     db = PostgresDatasource(Config.DATABASE_MULTISYNC_LABOR_ARCHIWUM)
     params = task_params.get('params', {})
     generate_pdf = params.get('generate_pdf') == 'tak'
+    generate_selected = params.get('generate_pdf') == 'zaznaczone'
     selected_ids = params.get('selected_ids')
     file_type = params.get("typ_pliku", "pdf")
     format_cda = params.get("format_cda", "cda")
+    
+    # Parametry paginacji
+    page = int(params.get('page', 1))
+    page_size = int(params.get('page_size', 50))
+    offset = (page - 1) * page_size
 
-    if generate_pdf:
+    if generate_pdf or generate_selected:
         if not selected_ids:
-            return {"type": "info", "text": "Nie wybrano żadnych ID do pobrania."}
+            if generate_selected:
+                return {"type": "info", "text": "Nie zaznaczono żadnych ID do pobrania. Zaznacz checkboxy przy wybranych wierszach."}
+            else:
+                return {"type": "info", "text": "Nie wybrano żadnych ID do pobrania."}
 
         ids = [int(id_.strip()) for id_ in selected_ids.split(',') if id_.strip().isdigit()]
         if not ids:
@@ -326,7 +347,15 @@ def raport(task_params):
     if conditions:
         where_clause = "WHERE " + " AND ".join(conditions)
 
-    sql = f'SELECT * FROM wynikowe_dane.wyniki {where_clause} LIMIT 1000'
+    # Zapytanie o całkowitą liczbę wyników
+    count_sql = f'''SELECT COUNT(*) as total FROM wynikowe_dane.wyniki {where_clause}'''
+    count_result = db.dict_select(count_sql, values)
+    total_count = count_result[0]['total'] if count_result else 0
+    
+    # Zapytanie o dane z paginacją
+    sql = f'''SELECT * FROM wynikowe_dane.wyniki {where_clause} 
+              ORDER BY id 
+              LIMIT {page_size} OFFSET {offset}'''
     print(f"DIAGNOSTYKA - DZIAŁAJĄCA WERSJA - ZAPYTANIE SQL: {sql}")
     print(f"DIAGNOSTYKA - DZIAŁAJĄCA WERSJA - WARTOŚCI SQL: {values}")
     results = db.dict_select(sql, values)
@@ -355,8 +384,20 @@ def raport(task_params):
 
     data = [[row.get(col) for col in columns] for row in results]
 
+    # Informacje o paginacji
+    total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 0
+    
     return {
         "type": "table",
         "header": header,
-        "data": prepare_for_json(data)
+        "data": prepare_for_json(data),
+        "show_checkboxes": True,  # Flaga dla frontendu - włącza checkboxy
+        "pagination": {
+            "current_page": page,
+            "page_size": page_size,
+            "total_count": total_count,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1
+        }
     }
